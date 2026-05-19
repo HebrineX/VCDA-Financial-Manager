@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace VCDA.FinancialManager.Web.Data;
 
@@ -11,6 +12,7 @@ public static class IdentitySeed
 
     public static async Task SeedAsync(IServiceProvider services)
     {
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("IdentitySeed");
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var context = services.GetRequiredService<ApplicationDbContext>();
@@ -25,7 +27,24 @@ public static class IdentitySeed
             }
         }
 
-        var admin = await userManager.FindByEmailAsync(DefaultAdminEmail);
+        var normalizedAdminEmail = userManager.NormalizeEmail(DefaultAdminEmail);
+        var adminCandidates = await context.Users
+            .Where(user => user.NormalizedEmail == normalizedAdminEmail)
+            .OrderByDescending(user => user.UserName == DefaultAdminUserName)
+            .ThenBy(user => user.UserName)
+            .ThenBy(user => user.Id)
+            .ToListAsync();
+
+        if (adminCandidates.Count > 1)
+        {
+            logger.LogWarning(
+                "IdentitySeed encontró {Count} usuarios con el email admin {Email}. Se utilizará {UserId}.",
+                adminCandidates.Count,
+                DefaultAdminEmail,
+                adminCandidates[0].Id);
+        }
+
+        var admin = adminCandidates.FirstOrDefault();
         if (admin is null)
         {
             admin = new ApplicationUser

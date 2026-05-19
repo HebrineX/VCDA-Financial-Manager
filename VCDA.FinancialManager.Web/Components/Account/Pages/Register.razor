@@ -7,13 +7,14 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using VCDA.FinancialManager.Web.Data
+@using VCDA.FinancialManager.Web.Services
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject ILogger<Register> Logger
-@inject NavigationManager NavigationManager
+@inject PublicLinkService PublicLinkService
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Registrarse - VCDA-Financial-Manager</PageTitle>
@@ -77,7 +78,7 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(GetDisplayError))}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,6 +88,26 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
+        var existingUser = await UserManager.FindByNameAsync(Input.Email);
+        if (existingUser is not null)
+        {
+            if (!await UserManager.IsEmailConfirmedAsync(existingUser))
+            {
+                await SendConfirmationEmailAsync(existingUser, Input.Email);
+                RedirectManager.RedirectTo(
+                    "Account/RegisterConfirmation",
+                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+                return;
+            }
+
+            identityErrors = [new IdentityError
+            {
+                Code = nameof(IdentityErrorDescriber.DuplicateUserName),
+                Description = "Ese correo ya esta registrado. Inicia sesion o usa recuperar contrasena."
+            }];
+            return;
+        }
+
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
@@ -104,14 +125,7 @@
 
         await UserManager.AddToRoleAsync(user, AppRoles.User);
 
-        var userId = await UserManager.GetUserIdAsync(user);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        await SendConfirmationEmailAsync(user, Input.Email);
 
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
@@ -147,6 +161,25 @@
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
     }
+
+    private async Task SendConfirmationEmailAsync(ApplicationUser user, string email)
+    {
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = PublicLinkService.Build(
+            "Account/ConfirmEmail",
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(callbackUrl));
+    }
+
+    private static string GetDisplayError(IdentityError error) => error.Code switch
+    {
+        nameof(IdentityErrorDescriber.DuplicateUserName) => "Ese correo ya esta registrado. Inicia sesion o usa recuperar contrasena.",
+        nameof(IdentityErrorDescriber.DuplicateEmail) => "Ese correo ya esta registrado. Inicia sesion o usa recuperar contrasena.",
+        _ => error.Description
+    };
 
     private sealed class InputModel
     {

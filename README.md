@@ -56,16 +56,25 @@ copy .env.example .env
 docker compose up --build
 ```
 
-Abrir `http://localhost:8080` con Nginx local al frente del contenedor web.
+Abrir `https://localhost:8443` con Nginx local al frente del contenedor web. El puerto HTTP `8080` queda disponible solo para redirigir a HTTPS.
 
 Los volúmenes locales persisten claves de DataProtection y el certificado X.509 en `docker-data/`.
 La base SQLite queda persistida en `docker-data/app/`.
+
+Para limpiar datos de prueba en el próximo arranque Docker, configura en `.env`:
+
+```env
+APP_RESET_DATABASE_ON_START=true
+```
+
+Luego ejecuta `docker compose up --build`. El contenedor borra y recrea la base SQLite, conservando certificados y secretos. Después del reset, vuelve a dejar esa variable en `false` para no borrar datos en cada arranque.
 
 ### SMTP, confirmación de email y recuperación de contraseña
 
 Para que funcionen verificación de email y reset de contraseña, completa en `.env`:
 
 ```env
+APP_PUBLIC_BASE_URL=https://localhost:8443
 Smtp__Host=smtp.tu-proveedor.com
 Smtp__Port=587
 Smtp__EnableSsl=true
@@ -76,6 +85,8 @@ Smtp__Password=tu-password-smtp
 ```
 
 Si usas Gmail, normalmente necesitas contraseña de aplicación en lugar de tu password normal.
+
+`APP_PUBLIC_BASE_URL` define la URL que aparece dentro de los emails de confirmación y recuperación. En local con Nginx debe ser `https://localhost:8443`; en un despliegue real debe apuntar al dominio público, por ejemplo `https://finanzas.tudominio.com`.
 
 ### Plan de imagen base 1.0 sin ACR
 
@@ -119,13 +130,96 @@ Checklist mínimo para cerrar la 1.0:
 - Validar login, dashboard, reportes, importación CSV y panel admin con la imagen versionada.
 - Correr `dotnet build` y `dotnet test` antes de publicar.
 
-### Nginx local
+### Nginx local con HTTPS
 
 El proyecto ya incluye un servicio `nginx` como reverse proxy local para Blazor Server y WebSockets.
 
 - `web` queda expuesto solo dentro de la red de Docker.
-- `nginx` publica `http://localhost:8080`.
-- Si más adelante terminás TLS en Nginx, la app ya está preparada para `ForwardedHeaders`.
+- `nginx` publica `https://localhost:8443`.
+- `nginx` conserva `http://localhost:8080` solo para redirigir a HTTPS.
+- TLS termina en Nginx y la app recibe `X-Forwarded-Proto=https`.
+
+Para generar un certificado local autofirmado para Nginx:
+
+```powershell
+$certDir = Join-Path (Get-Location) 'docker-data\certs'
+New-Item -ItemType Directory -Force -Path $certDir | Out-Null
+
+$rsa = [System.Security.Cryptography.RSA]::Create(2048)
+$req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
+  'CN=localhost',
+  $rsa,
+  [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+  [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+
+$san = [System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder]::new()
+$san.AddDnsName('localhost')
+$san.AddIpAddress([System.Net.IPAddress]::Parse('127.0.0.1'))
+$san.AddIpAddress([System.Net.IPAddress]::Parse('::1'))
+$req.CertificateExtensions.Add($san.Build())
+$req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($false, $false, 0, $true))
+$req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(
+  [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature -bor
+  [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment,
+  $true))
+
+$oids = [System.Security.Cryptography.OidCollection]::new()
+[void]$oids.Add([System.Security.Cryptography.Oid]::new('1.3.6.1.5.5.7.3.1'))
+$req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($oids, $true))
+
+$cert = $req.CreateSelfSigned([DateTimeOffset]::Now.AddDays(-1), [DateTimeOffset]::Now.AddYears(2))
+$certPem = [System.Security.Cryptography.PemEncoding]::WriteString(
+  'CERTIFICATE',
+  $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
+$keyPem = [System.Security.Cryptography.PemEncoding]::WriteString('PRIVATE KEY', $rsa.ExportPkcs8PrivateKey())
+
+Set-Content -LiteralPath (Join-Path $certDir 'nginx.crt') -Value $certPem -NoNewline -Encoding ascii
+Set-Content -LiteralPath (Join-Path $certDir 'nginx.key') -Value $keyPem -NoNewline -Encoding ascii
+```
+
+El navegador puede mostrar advertencia por ser autofirmado. Para evitar advertencias en LAN o Internet, usá un certificado confiable de Let's Encrypt, Cloudflare Tunnel, ngrok o un reverse proxy con TLS válido.
+
+### Exponer en red local o Internet
+
+Para exponerlo dentro de tu red local, define en `.env` el puerto y la URL pública que usarán los emails:
+
+```env
+APP_HTTP_PORT=8080
+APP_HTTPS_PORT=8443
+APP_PUBLIC_BASE_URL=https://IP_DE_TU_PC:8443
+APP_RESET_DATABASE_ON_START=false
+```
+
+Luego levantá:
+
+```bash
+docker compose up --build -d
+```
+
+En Windows, permití el puerto en el firewall:
+
+```powershell
+New-NetFirewallRule -DisplayName "VCDA Financial Manager HTTPS 8443" -Direction Inbound -Protocol TCP -LocalPort 8443 -Action Allow
+```
+
+Desde otro equipo de la misma red, abrí `https://IP_DE_TU_PC:8443`.
+
+Para Internet, necesitás redirigir en el router el puerto externo `443` hacia `IP_DE_TU_PC:8443`, o usar un túnel/reverse proxy con TLS. Seteá siempre:
+
+```env
+APP_PUBLIC_BASE_URL=https://tu-dominio-o-tunel
+```
+
+Controles activos antes de exponer:
+
+- confirmación de email obligatoria
+- email único por usuario
+- bloqueo temporal tras 5 intentos fallidos
+- política de contraseña reforzada
+- cookies `HttpOnly` y sesión expirable
+- rate limiting global por IP
+- headers `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`
+- tamaño máximo de request en Nginx limitado a `5m`
 
 ## Funcionalidades principales
 

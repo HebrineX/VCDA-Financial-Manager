@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -15,14 +16,30 @@ using VCDA.FinancialManager.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var enforceHttps = builder.Configuration.GetValue("App:EnforceHttps", !builder.Environment.IsDevelopment());
+var resetDatabaseOnStartup = builder.Configuration.GetValue("App:ResetDatabaseOnStartup", false);
 
 builder.Services.AddScoped<FinancialService>();
 builder.Services.AddScoped<AdminUserService>();
+builder.Services.AddScoped<PublicLinkService>();
 builder.Services.AddOptions<SmtpOptions>()
     .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole(AppRoles.Admin));
+});
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(remoteIp, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 120,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
 });
 
 // Configurar Serilog primero para poder usarlo en el resto del arranque
@@ -78,6 +95,15 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = true;
+        options.User.RequireUniqueEmail = true;
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+        options.Password.RequiredLength = 8;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddRoles<IdentityRole>()
@@ -86,6 +112,13 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddTransient<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
@@ -97,11 +130,27 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    if (resetDatabaseOnStartup)
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await context.Database.EnsureDeletedAsync();
+        Log.Warning("Base de datos reiniciada por App:ResetDatabaseOnStartup=true.");
+    }
+
     await IdentitySeed.SeedAsync(scope.ServiceProvider);
 }
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
+    context.Response.Headers.TryAdd("Referrer-Policy", "no-referrer");
+    context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    await next();
+});
+app.UseRateLimiter();
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
