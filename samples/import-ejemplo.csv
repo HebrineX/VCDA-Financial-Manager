@@ -1,0 +1,16 @@
+Fecha,Descripcion,Monto,Tipo,Categoria,Cuenta
+2026-05-01,Sueldo mensual mayo,285000.00,Ingreso,Sueldo,Banco
+2026-05-02,Venta freelance landing page,45000.50,Ingreso,Ventas,Banco
+2026-05-03,Supermercado semanal,18750.25,Egreso,Alimentos,Efectivo
+2026-05-04,Nafta y peajes,9200.00,Egreso,Transporte,Efectivo
+2026-05-05,Factura internet + streaming,8900.00,Egreso,Servicios,Banco
+2026-05-06,Cena con amigos,15600.75,Egreso,Ocio,Tarjeta
+2026-05-08,Devolucion compra online (ajuste),3200.00,Egreso,Alimentos,Tarjeta
+2026-05-09,Colectivo y subte recarga,4500.00,Egreso,Transporte,Efectivo
+2026-05-10,Edesur + metrogas,22100.00,Egreso,Servicios,Banco
+2026-05-12,Panaderia y verduleria,4320.80,Egreso,Alimentos,Efectivo
+2026-05-14,Venta curso online,12000.00,Ingreso,Ventas,Banco
+2026-05-15,Cine y pochoclos,6800.00,Egreso,Ocio,Tarjeta
+2026-05-16,Farmacia y perfumeria,5400.30,Egreso,Alimentos,Tarjeta
+2026-05-17,Uber al aeropuerto,11200.00,Egreso,Transporte,Tarjeta
+2026-05-18,Anticipo cliente proyecto X,80000.00,Ingreso,Ventas,Banco

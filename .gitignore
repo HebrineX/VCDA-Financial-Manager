@@ -1,0 +1,30 @@
+# Binarios y artefactos de build
+**/bin/
+**/obj/
+
+# Datos locales de Docker (secretos y claves — nunca al repo)
+docker-data/certs/
+docker-data/dataprotection/
+docker-data/app/
+
+# Harness local de trabajo
+.hebrinex/
+
+# Base de datos SQLite local
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
+
+# Variables de entorno locales
+.env
+.env.*
+!.env.example
+
+# IDE
+.vs/
+.idea/
+*.user

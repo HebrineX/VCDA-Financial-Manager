@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="VCDA.FinancialManager.Application/VCDA.FinancialManager.Application.csproj" />
+  <Project Path="VCDA.FinancialManager.Domain.Tests/VCDA.FinancialManager.Domain.Tests.csproj" />
+  <Project Path="VCDA.FinancialManager.Domain/VCDA.FinancialManager.Domain.csproj" />
+  <Project Path="VCDA.FinancialManager.Infrastructure/VCDA.FinancialManager.Infrastructure.csproj" />
+  <Project Path="VCDA.FinancialManager.Web/VCDA.FinancialManager.Web.csproj" />
+</Solution>

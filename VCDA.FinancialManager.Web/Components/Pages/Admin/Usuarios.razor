@@ -1,0 +1,151 @@
+@page "/admin/usuarios"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using VCDA.FinancialManager.Web.Services
+@inject AdminUserService AdminUserService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Administración de Usuarios</PageTitle>
+
+<div class="container-fluid py-4 animated-fade-in">
+    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-people-fill me-2"></span> Gestión de Usuarios</h2>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (users is null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover m-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Email</th>
+                                <th>Roles</th>
+                                <th>Email confirmado</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in users)
+                            {
+                                <tr>
+                                    <td class="ps-4">@user.Email</td>
+                                    <td>
+                                        @foreach (var role in user.Roles)
+                                        {
+                                            <span class="badge @(role == "Admin" ? "bg-primary" : "bg-secondary") me-1">@role</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (user.EmailConfirmed)
+                                        {
+                                            <span class="badge bg-success">Sí</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">No</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (user.IsLockedOut)
+                                        {
+                                            <span class="badge bg-danger">Bloqueado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm @(user.IsAdmin ? "btn-outline-primary" : "btn-primary")"
+                                                    title="@(user.IsAdmin ? "Quitar rol Admin" : "Asignar rol Admin")"
+                                                    @onclick="() => ToggleAdminRole(user.Id, !user.IsAdmin)">
+                                                @(user.IsAdmin ? "Quitar Admin" : "Hacer Admin")
+                                            </button>
+                                            <button class="btn btn-sm @(user.IsLockedOut ? "btn-success" : "btn-outline-danger")"
+                                                    @onclick="() => ToggleLockout(user.Id)">
+                                                @(user.IsLockedOut ? "Activar" : "Desactivar")
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<VCDA.FinancialManager.Web.Models.UserAdminInfo>? users;
+    private string? currentUserId;
+    private string? statusMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        users = await AdminUserService.GetUsersAsync();
+    }
+
+    private async Task ToggleLockout(string userId)
+    {
+        errorMessage = null;
+        statusMessage = null;
+        var ok = await AdminUserService.ToggleLockoutAsync(userId);
+        if (!ok)
+        {
+            errorMessage = "No se pudo cambiar el estado del usuario.";
+            return;
+        }
+
+        users = await AdminUserService.GetUsersAsync();
+        statusMessage = "Estado de acceso actualizado.";
+    }
+
+    private async Task ToggleAdminRole(string userId, bool makeAdmin)
+    {
+        errorMessage = null;
+        statusMessage = null;
+        var (success, error) = await AdminUserService.SetUserAdminRoleAsync(userId, makeAdmin, currentUserId);
+        if (!success)
+        {
+            errorMessage = error;
+            return;
+        }
+
+        users = await AdminUserService.GetUsersAsync();
+        statusMessage = makeAdmin
+            ? "Rol de administrador asignado."
+            : "Rol de administrador removido.";
+    }
+}

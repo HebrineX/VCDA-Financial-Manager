@@ -1,0 +1,57 @@
+@inherits LayoutComponentBase
+@using System.Security.Claims
+@inject IJSRuntime JS
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <img src="brand-mark.svg" alt="VCDA-Financial-Manager" class="topbar-brand-mark" />
+                <div class="brand-title-block">
+                    <span class="fs-5 fw-bold text-primary text-gradient d-block">VCDA-Financial-Manager</span>
+                    <span class="brand-subtitle">Control financiero claro, visual y multiusuario.</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <AuthorizeView>
+                    <Authorized Context="authContext">
+                        <span class="text-muted small d-none d-md-inline">
+                            <span class="bi bi-person-circle me-1"></span>
+                            @(authContext.User.FindFirst(ClaimTypes.Email)?.Value ?? authContext.User.Identity?.Name)
+                        </span>
+                    </Authorized>
+                </AuthorizeView>
+                <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 theme-toggle-btn" 
+                        id="themeToggleBtn"
+                        onclick="toggleApplicationTheme()">
+                    <span id="themeToggleIcon" class="bi bi-sun-fill text-warning" aria-hidden="true" style="font-size: 1.1rem;"></span>
+                    <span id="themeToggleText">Modo Claro</span>
+                </button>
+            </div>
+        </div>
+
+        <article class="content px-4 animated-fade-in">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("window.syncThemeButton");
+        }
+    }
+}

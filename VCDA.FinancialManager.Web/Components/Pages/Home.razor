@@ -1,0 +1,484 @@
+@page "/"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using VCDA.FinancialManager.Domain.Entities
+@using VCDA.FinancialManager.Domain.Enums
+@using VCDA.FinancialManager.Web.Models
+@using VCDA.FinancialManager.Web.Services
+@inject FinancialService FinancialService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Dashboard - VCDA-Financial-Manager</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container-fluid py-4 animated-fade-in">
+            <!-- Header Row -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold m-0 text-gradient">¡Hola, @context.User.Identity?.Name!</h2>
+                    <p class="text-muted m-0">Aquí tienes el estado general de tus finanzas personales.</p>
+                </div>
+                <div class="text-muted">
+                    <span class="bi bi-calendar3 me-2"></span> @DateTime.Now.ToString("dd MMMM, yyyy")
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- KPI Row -->
+                <div class="row g-4 mb-4">
+                    <!-- Patrimonio Neto -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-muted fw-bold text-uppercase fs-7">Patrimonio Neto</span>
+                                        <span class="bi bi-wallet2 fs-4 text-primary"></span>
+                                    </div>
+                                    @if (patrimonioPorMoneda.Any())
+                                    {
+                                        @foreach (var pat in patrimonioPorMoneda)
+                                        {
+                                            <h3 class="fw-bold m-0">@FormatMonto(pat.Value, pat.Key)</h3>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <h3 class="fw-bold m-0">$0.00</h3>
+                                    }
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-success">Activo</span>
+                                    <small class="text-muted ms-2">Consolidado total</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ingresos Mensuales -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-muted fw-bold text-uppercase fs-7">Ingresos (Mes)</span>
+                                        <span class="bi bi-arrow-up-right-circle fs-4 text-success"></span>
+                                    </div>
+                                    @if (ingresosPorMoneda.Any())
+                                    {
+                                        @foreach (var ing in ingresosPorMoneda)
+                                        {
+                                            <h3 class="fw-bold text-success m-0">+@FormatMonto(ing.Value, ing.Key)</h3>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <h3 class="fw-bold text-success m-0">$0.00</h3>
+                                    }
+                                </div>
+                                <div class="mt-3">
+                                    <span class="text-muted small">Mes actual: @DateTime.Now.ToString("MMMM")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Egresos Mensuales -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-muted fw-bold text-uppercase fs-7">Egresos (Mes)</span>
+                                        <span class="bi bi-arrow-down-left-circle fs-4 text-danger"></span>
+                                    </div>
+                                    @if (egresosPorMoneda.Any())
+                                    {
+                                        @foreach (var egr in egresosPorMoneda)
+                                        {
+                                            <h3 class="fw-bold text-danger m-0">-@FormatMonto(egr.Value, egr.Key)</h3>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <h3 class="fw-bold text-danger m-0">$0.00</h3>
+                                    }
+                                </div>
+                                <div class="mt-3">
+                                    <span class="text-muted small">Mes actual: @DateTime.Now.ToString("MMMM")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (budgetProgress.Any())
+                {
+                    <div class="card mb-4">
+                        <div class="card-header fw-bold">
+                            <span class="bi bi-piggy-bank me-2"></span> Presupuestos del mes
+                        </div>
+                        <div class="card-body d-flex flex-column gap-3">
+                            @foreach (var budget in budgetProgress)
+                            {
+                                var barClass = budget.AlertLevel switch
+                                {
+                                    BudgetAlertLevel.Danger => "bg-danger",
+                                    BudgetAlertLevel.Warning => "bg-warning",
+                                    _ => "bg-primary"
+                                };
+                                <div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-bold small">@budget.CategoriaNombre</span>
+                                        <span class="small">
+                                            @budget.Gastado.ToString("C2") / @budget.Limite.ToString("C2")
+                                            (@budget.Porcentaje.ToString("0")%)
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar @barClass" style="width: @(Math.Min(budget.Porcentaje, 100).ToString("0"))%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="row g-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><span class="bi bi-graph-up-arrow me-2"></span> Tendencia financiera</span>
+                                <small class="text-muted">Ingresos, egresos y balance de 6 meses</small>
+                            </div>
+                            <div class="card-body">
+                                @if (monthlyHistory.Any())
+                                {
+                                    var chartWidth = 720d;
+                                    var paddingLeft = 32d;
+                                    var plotHeight = 186d;
+                                    var baselineY = 242d;
+                                    var step = monthlyHistory.Count > 1 ? (chartWidth - 50d) / (monthlyHistory.Count - 1) : chartWidth - 50d;
+                                    var maxValue = Math.Max(1m, monthlyHistory.Max(p => new[] { p.Ingresos, p.Egresos, Math.Abs(p.Balance) }.Max()));
+                                    var incomePoints = string.Join(" ", monthlyHistory.Select((point, index) =>
+                                    {
+                                        var x = paddingLeft + (step * index);
+                                        var y = 24d + (double)((maxValue - point.Ingresos) / maxValue) * plotHeight;
+                                        return $"{x:0.##},{y:0.##}";
+                                    }));
+                                    var balancePoints = string.Join(" ", monthlyHistory.Select((point, index) =>
+                                    {
+                                        var x = paddingLeft + (step * index);
+                                        var normalized = (double)((point.Balance + maxValue) / (maxValue * 2));
+                                        var y = 24d + (1 - normalized) * plotHeight;
+                                        return $"{x:0.##},{y:0.##}";
+                                    }));
+
+                                    <svg viewBox="0 0 720 280" class="w-100 report-trend-chart" role="img" aria-label="Gráfico de tendencia financiera">
+                                        <line x1="@paddingLeft" y1="@baselineY" x2="700" y2="@baselineY" class="chart-axis"></line>
+                                        <line x1="@paddingLeft" y1="116" x2="700" y2="116" class="chart-midline"></line>
+                                        @for (var i = 0; i < monthlyHistory.Count; i++)
+                                        {
+                                            var point = monthlyHistory[i];
+                                            var x = paddingLeft + (step * i);
+                                            var incomeHeight = (double)(point.Ingresos / maxValue) * plotHeight;
+                                            var expenseHeight = (double)(point.Egresos / maxValue) * plotHeight;
+                                            var incomeY = baselineY - incomeHeight;
+                                            var expenseY = baselineY - expenseHeight;
+                                            <g>
+                                                <rect x="@(x - 18)" y="@incomeY" width="14" height="@incomeHeight" class="chart-bar-income" rx="6" />
+                                                <rect x="@(x + 4)" y="@expenseY" width="14" height="@expenseHeight" class="chart-bar-expense" rx="6" />
+                                                <text x="@x" y="266" text-anchor="middle" class="chart-label">@point.Label</text>
+                                            </g>
+                                        }
+                                        <polyline points="@incomePoints" class="chart-line-income"></polyline>
+                                        <polyline points="@balancePoints" class="chart-line-balance"></polyline>
+                                    </svg>
+
+                                    <div class="trend-legend mt-3">
+                                        <span><i class="legend-swatch legend-income"></i>Ingresos</span>
+                                        <span><i class="legend-swatch legend-expense"></i>Egresos</span>
+                                        <span><i class="legend-swatch legend-balance"></i>Balance</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted m-0">Todavía no hay historial suficiente para construir la tendencia.</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historial Reciente -->
+                    <div class="col-lg-8">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="m-0"><span class="bi bi-clock-history me-2"></span> Movimientos Recientes</span>
+                                <a href="transacciones" class="btn btn-sm btn-outline-primary py-1 px-3">Cargar Transacción</a>
+                            </div>
+                            <div class="card-body p-0">
+                                @if (recentTransactions.Any())
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-hover m-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Cuenta</th>
+                                                    <th>Categoría</th>
+                                                    <th>Detalle</th>
+                                                    <th class="text-end">Monto</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var tx in recentTransactions)
+                                                {
+                                                    <tr>
+                                                        <td class="text-muted">@tx.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                                        <td>@tx.Cuenta?.Nombre</td>
+                                                        <td>
+                                                            <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: var(--accent-color); border: 1px solid rgba(59, 130, 246, 0.2);">
+                                                                @tx.Categoria?.Nombre
+                                                            </span>
+                                                        </td>
+                                                        <td>@tx.Descripcion</td>
+                                                        <td class="text-end fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "text-success" : "text-danger")">
+                                                            @(tx.Tipo == TipoTransaccion.Ingreso ? "+" : "-") @FormatMonto(tx.Monto, tx.Cuenta?.Moneda ?? "ARS")
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-5">
+                                        <span class="bi bi-cash-stack fs-1 text-muted d-block mb-3"></span>
+                                        <p class="text-muted m-0">No se registran movimientos.</p>
+                                        <a href="transacciones" class="btn btn-primary btn-sm mt-3">Comenzar a cargar</a>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribución de Gastos -->
+                    <div class="col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <span><span class="bi bi-pie-chart-fill me-2"></span> Gastos por Categoría</span>
+                            </div>
+                            <div class="card-body">
+                                @if (expenseDistribution.Any())
+                                {
+                                    <div class="d-flex flex-column gap-3">
+                                        @foreach (var dist in expenseDistribution)
+                                        {
+                                            <div>
+                                                <div class="d-flex justify-content-between mb-1">
+                                                    <span class="fw-bold small text-muted">@dist.CategoryName</span>
+                                                    <span class="small fw-bold">@dist.Percentage.ToString("0.0")% (@FormatMonto(dist.Amount, "ARS"))</span>
+                                                </div>
+                                                <div class="progress" style="height: 8px; border-radius: 4px; background-color: var(--border-color);">
+                                                    <div class="progress-bar bg-primary" role="progressbar" style="width: @dist.Percentage.ToString("0")%; border-radius: 4px;" aria-valuenow="@dist.Percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-5">
+                                        <span class="bi bi-pie-chart fs-1 text-muted d-block mb-3"></span>
+                                        <p class="text-muted m-0">Sin egresos registrados este mes.</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="container py-5 animated-fade-in d-flex flex-column justify-content-center" style="min-height: 80vh;">
+            <div class="vcda-hero card border-0 overflow-hidden">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="row align-items-center g-4">
+                        <div class="col-lg-6">
+                            <span class="vcda-kicker">VCDA-Financial-Manager</span>
+                            <h1 class="fw-bold display-4 text-gradient mb-3">Claridad visual para cada peso, dólar y decisión.</h1>
+                            <p class="text-muted fs-5 mb-4">
+                                Ordena cuentas, movimientos y presupuestos en una experiencia sobria, moderna y pensada para seguir tu balance sin ruido.
+                            </p>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <a href="Account/Register" class="btn btn-primary btn-lg">Empezar Ahora</a>
+                                <a href="Account/Login" class="btn btn-outline-secondary btn-lg">Iniciar Sesión</a>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="vcda-hero-graphic" aria-hidden="true">
+                                <svg viewBox="0 0 520 360" class="w-100">
+                                    <defs>
+                                        <linearGradient id="heroPanel" x1="80" y1="40" x2="420" y2="320" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="#1d4ed8" stop-opacity="0.9" />
+                                            <stop offset="1" stop-color="#0f172a" stop-opacity="0.98" />
+                                        </linearGradient>
+                                        <linearGradient id="heroLine" x1="142" y1="228" x2="385" y2="128" gradientUnits="userSpaceOnUse">
+                                            <stop stop-color="#93c5fd" />
+                                            <stop offset="1" stop-color="#f8fafc" />
+                                        </linearGradient>
+                                    </defs>
+                                    <circle cx="404" cy="82" r="58" class="hero-orbit hero-orbit-soft" />
+                                    <circle cx="110" cy="274" r="74" class="hero-orbit hero-orbit-strong" />
+                                    <rect x="88" y="52" width="344" height="248" rx="32" fill="url(#heroPanel)" class="hero-shell" />
+                                    <rect x="118" y="92" width="284" height="168" rx="22" class="hero-screen" />
+                                    <path d="M144 226L196 184L247 199L308 145L376 127" fill="none" stroke="url(#heroLine)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M144 245H376" class="hero-axis" />
+                                    <circle cx="196" cy="184" r="8" class="hero-node" />
+                                    <circle cx="247" cy="199" r="8" class="hero-node" />
+                                    <circle cx="308" cy="145" r="8" class="hero-node" />
+                                    <circle cx="376" cy="127" r="8" class="hero-node" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 max-width-md my-4 w-100" style="max-width: 900px;">
+                <div class="col-md-4">
+                    <div class="card h-100 p-3">
+                        <div class="card-body">
+                            <span class="bi bi-wallet2 fs-2 text-primary d-block mb-3"></span>
+                            <h5 class="fw-bold mb-2">Múltiples Cuentas</h5>
+                            <p class="text-muted small m-0">Gestiona tus ahorros, billeteras virtuales y efectivo en distintas monedas.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 p-3">
+                        <div class="card-body">
+                            <span class="bi bi-lightning-charge fs-2 text-success d-block mb-3"></span>
+                            <h5 class="fw-bold mb-2">Movimientos Ágiles</h5>
+                            <p class="text-muted small m-0">Registra tus ingresos y egresos con un solo click y balanceo automático atómico.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 p-3">
+                        <div class="card-body">
+                            <span class="bi bi-shield-check fs-2 text-info d-block mb-3"></span>
+                            <h5 class="fw-bold mb-2">Inmutabilidad Total</h5>
+                            <p class="text-muted small m-0">Tu historial está resguardado con estricta inmutabilidad a nivel de base de datos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool isLoading = true;
+    private List<Transaccion> recentTransactions = new();
+    private Dictionary<string, decimal> patrimonioPorMoneda = new();
+    private Dictionary<string, decimal> ingresosPorMoneda = new();
+    private Dictionary<string, decimal> egresosPorMoneda = new();
+    private List<CategoryExpenseDistribution> expenseDistribution = new();
+    private List<BudgetProgress> budgetProgress = [];
+    private List<MonthlyBalancePoint> monthlyHistory = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+            
+            // Query DB info
+            var accounts = await FinancialService.GetCuentasAsync(userId);
+            var transactions = await FinancialService.GetTransaccionesAsync(userId);
+
+            // Calculate Patrimonio Neto by Currency
+            patrimonioPorMoneda = accounts
+                .GroupBy(a => a.Moneda)
+                .ToDictionary(g => g.Key, g => g.Sum(a => a.Saldo));
+
+            // Monthly aggregations (current month)
+            var startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var currentMonthTx = transactions.Where(t => t.Fecha >= startOfMonth).ToList();
+
+            ingresosPorMoneda = currentMonthTx
+                .Where(t => t.Tipo == TipoTransaccion.Ingreso)
+                .GroupBy(t => t.Cuenta?.Moneda ?? "ARS")
+                .ToDictionary(g => g.Key, g => g.Sum(t => t.Monto));
+
+            egresosPorMoneda = currentMonthTx
+                .Where(t => t.Tipo == TipoTransaccion.Egreso)
+                .GroupBy(t => t.Cuenta?.Moneda ?? "ARS")
+                .ToDictionary(g => g.Key, g => g.Sum(t => t.Monto));
+
+            // Recent 5 transactions
+            recentTransactions = transactions.Take(5).ToList();
+
+            // Calculate expense distribution by category
+            var monthlyExpenses = currentMonthTx.Where(t => t.Tipo == TipoTransaccion.Egreso).ToList();
+            var totalExpenseAmount = monthlyExpenses.Sum(t => t.Monto);
+
+            if (totalExpenseAmount > 0)
+            {
+                expenseDistribution = monthlyExpenses
+                    .GroupBy(t => t.Categoria?.Nombre ?? "Otros")
+                    .Select(g => new CategoryExpenseDistribution
+                    {
+                        CategoryName = g.Key,
+                        Amount = g.Sum(t => t.Monto),
+                        Percentage = (double)(g.Sum(t => t.Monto) / totalExpenseAmount * 100)
+                    })
+                    .OrderByDescending(d => d.Amount)
+                    .ToList();
+            }
+
+            budgetProgress = await FinancialService.GetBudgetProgressAsync(
+                userId, DateTime.Now.Month, DateTime.Now.Year);
+            monthlyHistory = await FinancialService.GetMonthlyBalanceHistoryAsync(userId);
+        }
+
+        isLoading = false;
+    }
+
+    private string FormatMonto(decimal monto, string moneda)
+    {
+        var culture = System.Globalization.CultureInfo.GetCultureInfo("es-AR");
+        string symbol = moneda switch
+        {
+            "USD" => "u$s",
+            "EUR" => "€",
+            _ => "$"
+        };
+        return $"{symbol} {monto.ToString("N2", culture)}";
+    }
+
+    public class CategoryExpenseDistribution
+    {
+        public string CategoryName { get; set; } = "";
+        public decimal Amount { get; set; }
+        public double Percentage { get; set; }
+    }
+}

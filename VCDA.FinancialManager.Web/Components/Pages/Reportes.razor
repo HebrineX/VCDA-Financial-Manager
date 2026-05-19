@@ -1,0 +1,239 @@
+@page "/reportes"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using VCDA.FinancialManager.Domain.Entities
+@using VCDA.FinancialManager.Domain.Enums
+@using VCDA.FinancialManager.Web.Models
+@using VCDA.FinancialManager.Web.Services
+@inject FinancialService FinancialService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Reportes</PageTitle>
+
+<div class="container-fluid py-4 animated-fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-gradient m-0"><span class="bi bi-bar-chart-line me-2"></span> Reportes</h2>
+        <a class="btn btn-outline-primary" href="@ExportUrl" target="_blank">
+            <span class="bi bi-download me-1"></span> Exportar CSV
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
+                    <InputDate class="form-control" @bind-Value="filter.Desde" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
+                    <InputDate class="form-control" @bind-Value="filter.Hasta" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-select" @bind="categoriaFilter">
+                        <option value="">Todas</option>
+                        @foreach (var c in categorias)
+                        {
+                            <option value="@c.Id">@c.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cuenta</label>
+                    <select class="form-select" @bind="cuentaFilter">
+                        <option value="">Todas</option>
+                        @foreach (var c in cuentas)
+                        {
+                            <option value="@c.Id">@c.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" @onclick="AplicarFiltros">Aplicar filtros</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (history.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Balance mensual (últimos 6 meses)</span>
+                <small class="text-muted">Barras: ingresos/egresos. Línea: balance neto.</small>
+            </div>
+            <div class="card-body">
+                @{
+                    var chartW = 760d;
+                    var paddingLeft = 32d;
+                    var baselineY = 220d;
+                    var plotHeight = 160d;
+                    var step = history.Count > 1 ? (chartW - 50d) / (history.Count - 1) : chartW - 50d;
+                    var maxSeries = Math.Max(1m, history.Max(h => new[] { h.Ingresos, h.Egresos, Math.Abs(h.Balance) }.Max()));
+                    var balancePoints = string.Join(" ", history.Select((point, index) =>
+                    {
+                        var x = paddingLeft + (step * index);
+                        var normalized = (double)((point.Balance + maxSeries) / (maxSeries * 2));
+                        var y = 24d + (1 - normalized) * plotHeight;
+                        return $"{x:0.##},{y:0.##}";
+                    }));
+                }
+                <svg viewBox="0 0 760 260" class="w-100 report-trend-chart" style="max-height: 280px;">
+                    <line x1="@paddingLeft" y1="@baselineY" x2="742" y2="@baselineY" class="chart-axis"></line>
+                    <line x1="@paddingLeft" y1="104" x2="742" y2="104" class="chart-midline"></line>
+                    @for (var i = 0; i < history.Count; i++)
+                    {
+                        var point = history[i];
+                        var x = paddingLeft + (step * i);
+                        var incomeHeight = (double)(point.Ingresos / maxSeries) * plotHeight;
+                        var expenseHeight = (double)(point.Egresos / maxSeries) * plotHeight;
+                        var incomeY = baselineY - incomeHeight;
+                        var expenseY = baselineY - expenseHeight;
+                        <g>
+                            <rect x="@(x - 18)" y="@incomeY" width="14" height="@incomeHeight" class="chart-bar-income" rx="6" />
+                            <rect x="@(x + 4)" y="@expenseY" width="14" height="@expenseHeight" class="chart-bar-expense" rx="6" />
+                            <text x="@x" y="246" text-anchor="middle" class="chart-label">@point.Label</text>
+                        </g>
+                    }
+                    <polyline points="@balancePoints" class="chart-line-balance"></polyline>
+                </svg>
+                <div class="trend-legend mt-3">
+                    <span><i class="legend-swatch legend-income"></i>Ingresos</span>
+                    <span><i class="legend-swatch legend-expense"></i>Egresos</span>
+                    <span><i class="legend-swatch legend-balance"></i>Balance</span>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (report is not null)
+    {
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="card text-center p-3">
+                    <small class="text-muted">Ingresos</small>
+                    <h4 class="text-success m-0">@report.TotalIngresos.ToString("C2")</h4>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center p-3">
+                    <small class="text-muted">Egresos</small>
+                    <h4 class="text-danger m-0">@report.TotalEgresos.ToString("C2")</h4>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center p-3">
+                    <small class="text-muted">Balance neto</small>
+                    <h4 class="@(report.BalanceNeto >= 0 ? "text-success" : "text-danger") m-0">@report.BalanceNeto.ToString("C2")</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Fecha</th>
+                                <th>Cuenta</th>
+                                <th>Categoría</th>
+                                <th>Descripción</th>
+                                <th class="text-end pe-4">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var tx in report.Items)
+                            {
+                                <tr>
+                                    <td class="ps-4">@tx.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@tx.Cuenta?.Nombre</td>
+                                    <td>@tx.Categoria?.Nombre</td>
+                                    <td>@tx.Descripcion</td>
+                                    <td class="text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "text-success" : "text-danger")">
+                                        @(tx.Tipo == TipoTransaccion.Ingreso ? "+" : "-")@tx.Monto.ToString("C2")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span class="text-muted small">@report.TotalCount transacciones</span>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(filter.Page <= 1)" @onclick="PaginaAnterior">Anterior</button>
+                    <span class="btn btn-sm btn-light disabled border">Página @filter.Page / @TotalPages</span>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(filter.Page >= TotalPages)" @onclick="PaginaSiguiente">Siguiente</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string userId = "";
+    private ReportFilter filter = new();
+    private ReportResult? report;
+    private List<MonthlyBalancePoint> history = [];
+    private List<Categoria> categorias = [];
+    private List<Cuenta> cuentas = [];
+    private string categoriaFilter = "";
+    private string cuentaFilter = "";
+
+    private int TotalPages => report is null ? 1 : Math.Max(1, (int)Math.Ceiling(report.TotalCount / (double)filter.PageSize));
+
+    private string ExportUrl
+    {
+        get
+        {
+            var qs = new List<string>();
+            if (filter.Desde.HasValue) qs.Add($"desde={filter.Desde:yyyy-MM-dd}");
+            if (filter.Hasta.HasValue) qs.Add($"hasta={filter.Hasta:yyyy-MM-dd}");
+            if (filter.CategoriaId.HasValue) qs.Add($"categoriaId={filter.CategoriaId}");
+            if (filter.CuentaId.HasValue) qs.Add($"cuentaId={filter.CuentaId}");
+            var query = qs.Count > 0 ? "?" + string.Join("&", qs) : "";
+            return NavigationManager.ToAbsoluteUri($"/api/reportes/exportar-csv{query}").ToString();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        categorias = await FinancialService.GetCategoriasAsync(userId);
+        cuentas = await FinancialService.GetCuentasAsync(userId);
+        history = await FinancialService.GetMonthlyBalanceHistoryAsync(userId);
+        await AplicarFiltros();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        filter.CategoriaId = Guid.TryParse(categoriaFilter, out var catId) ? catId : null;
+        filter.CuentaId = Guid.TryParse(cuentaFilter, out var cuentaId) ? cuentaId : null;
+        filter.Page = 1;
+        report = await FinancialService.GetReportAsync(userId, filter);
+    }
+
+    private async Task PaginaAnterior()
+    {
+        if (filter.Page > 1)
+        {
+            filter.Page--;
+            report = await FinancialService.GetReportAsync(userId, filter);
+        }
+    }
+
+    private async Task PaginaSiguiente()
+    {
+        if (filter.Page < TotalPages)
+        {
+            filter.Page++;
+            report = await FinancialService.GetReportAsync(userId, filter);
+        }
+    }
+}

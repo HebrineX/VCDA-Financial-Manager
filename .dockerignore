@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.git/
+.gitignore
+docker-data/
+VirgoFinancialManager.Web/Data/app.db
+VirgoFinancialManager.Web/Data/*.db
+VirgoFinancialManager.Web/Data/*.db-shm
+VirgoFinancialManager.Web/Data/*.db-wal
+.env
+.env.*
+README.md.bak

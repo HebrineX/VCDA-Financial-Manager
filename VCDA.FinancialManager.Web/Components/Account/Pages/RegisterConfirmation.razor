@@ -1,0 +1,46 @@
+@page "/Account/RegisterConfirmation"
+
+@using Microsoft.AspNetCore.Identity
+@using VCDA.FinancialManager.Web.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Confirmación de registro</PageTitle>
+
+<h1>Confirmación de registro</h1>
+
+<StatusMessage Message="@statusMessage" />
+
+<p role="alert">Revisa tu email para confirmar la cuenta y activar el acceso.</p>
+
+@code {
+    private string? statusMessage;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? Email { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Email is null)
+        {
+            RedirectManager.RedirectTo("");
+            return;
+        }
+
+        var user = await UserManager.FindByEmailAsync(Email);
+        if (user is null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            statusMessage = "No se encontró un usuario para el email indicado.";
+        }
+    }
+}

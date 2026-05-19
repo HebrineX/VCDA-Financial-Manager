@@ -1,0 +1,189 @@
+@page "/cuentas"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using VCDA.FinancialManager.Domain.Entities
+@using VCDA.FinancialManager.Web.Services
+@inject FinancialService FinancialService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Mis Cuentas - VCDA-Financial-Manager</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Listado de Cuentas -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header d-flex align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-wallet2 me-2"></i> Mis Cuentas Financieras</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (cuentas == null)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Cargando cuentas...</p>
+                        </div>
+                    }
+                    else if (!cuentas.Any())
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-cash-stack display-1 text-muted"></i>
+                            <h5 class="mt-3 text-muted">No tienes cuentas registradas</h5>
+                            <p class="text-muted small">Crea tu primera cuenta en el panel lateral para comenzar.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="py-3 ps-4">Nombre de Cuenta</th>
+                                        <th class="py-3">Moneda</th>
+                                        <th class="py-3 text-end pe-4">Saldo Actual</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var cuenta in cuentas)
+                                    {
+                                        <tr>
+                                            <td class="py-3 ps-4 fw-bold">
+                                                <i class="bi bi-wallet2 text-primary me-2"></i> @cuenta.Nombre
+                                            </td>
+                                            <td class="py-3"><span class="badge bg-secondary">@cuenta.Moneda</span></td>
+                                            <td class="py-3 text-end pe-4 fw-bold @(cuenta.Saldo >= 0 ? "text-success" : "text-danger")">
+                                                @cuenta.Saldo.ToString("C2")
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario Crear Cuenta -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header card-header-accent py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i> Nueva Cuenta</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> @errorMessage
+                        </div>
+                    }
+                    @if (successMessage)
+                    {
+                        <div class="alert alert-success" role="alert">
+                            <i class="bi bi-check-circle-fill me-2"></i> ¡Cuenta creada con éxito!
+                        </div>
+                    }
+
+                    <EditForm Model="nuevaCuenta" OnValidSubmit="HandleCreateCuenta" FormName="CreateCuentaForm">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label fw-bold">Nombre de la Cuenta</label>
+                            <InputText id="nombre" class="form-control" placeholder="Ej: Efectivo, Banco, Ahorros" @bind-Value="nuevaCuenta.Nombre" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="saldo" class="form-label fw-bold">Saldo Inicial</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <InputNumber id="saldo" class="form-control" @bind-Value="nuevaCuenta.Saldo" required />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="moneda" class="form-label fw-bold">Moneda</label>
+                            <InputSelect id="moneda" class="form-select" @bind-Value="nuevaCuenta.Moneda">
+                                <option value="ARS">ARS (Peso Argentino)</option>
+                                <option value="USD">USD (Dólar Estadounidense)</option>
+                                <option value="EUR">EUR (Euro)</option>
+                            </InputSelect>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                            <i class="bi bi-check-lg me-2"></i> Crear Cuenta
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Cuenta>? cuentas;
+    private string? userId;
+    private string? errorMessage;
+    private bool successMessage = false;
+
+    private CuentaFormModel nuevaCuenta = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        userId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await CargarCuentas();
+        }
+    }
+
+    private async Task CargarCuentas()
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            cuentas = await FinancialService.GetCuentasAsync(userId);
+        }
+    }
+
+    private async Task HandleCreateCuenta()
+    {
+        errorMessage = null;
+        successMessage = false;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            errorMessage = "No se pudo identificar al usuario autenticado.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(nuevaCuenta.Nombre))
+        {
+            errorMessage = "El nombre de la cuenta es requerido.";
+            return;
+        }
+
+        try
+        {
+            await FinancialService.CreateCuentaAsync(nuevaCuenta.Nombre, nuevaCuenta.Saldo, nuevaCuenta.Moneda, userId);
+            successMessage = true;
+            nuevaCuenta = new();
+            await CargarCuentas();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al crear la cuenta: {ex.Message}";
+        }
+    }
+
+    public class CuentaFormModel
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public decimal Saldo { get; set; } = 0m;
+        public string Moneda { get; set; } = "ARS";
+    }
+}

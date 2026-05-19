@@ -1,0 +1,154 @@
+@page "/presupuestos"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using VCDA.FinancialManager.Domain.Entities
+@using VCDA.FinancialManager.Domain.Enums
+@using VCDA.FinancialManager.Web.Services
+@inject FinancialService FinancialService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Presupuestos</PageTitle>
+
+<div class="container-fluid py-4 animated-fade-in">
+    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-piggy-bank me-2"></span> Presupuestos Mensuales</h2>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header fw-bold">Nuevo presupuesto</div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Categoría (Egreso)</label>
+                        <select class="form-select" @bind="nuevo.CategoriaId">
+                            <option value="@Guid.Empty">Seleccionar...</option>
+                            @foreach (var cat in categoriasEgreso)
+                            {
+                                <option value="@cat.Id">@cat.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Mes</label>
+                            <InputNumber class="form-control" @bind-Value="nuevo.Mes" min="1" max="12" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Año</label>
+                            <InputNumber class="form-control" @bind-Value="nuevo.Anio" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Límite</label>
+                        <InputNumber class="form-control" @bind-Value="nuevo.Limite" />
+                    </div>
+                    <button class="btn btn-primary w-100" @onclick="CrearPresupuesto">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header fw-bold">Presupuestos — @DateTime.Now.ToString("MMMM yyyy")</div>
+                <div class="card-body p-0">
+                    @if (presupuestos is null)
+                    {
+                        <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+                    }
+                    else if (!presupuestos.Any())
+                    {
+                        <p class="text-muted text-center py-4 m-0">No hay presupuestos definidos para este período.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover m-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-4">Categoría</th>
+                                        <th>Período</th>
+                                        <th class="text-end">Límite</th>
+                                        <th class="text-end pe-4"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var p in presupuestos)
+                                    {
+                                        <tr>
+                                            <td class="ps-4">@p.Categoria?.Nombre</td>
+                                            <td>@p.Mes/@p.Anio</td>
+                                            <td class="text-end">@p.Limite.ToString("C2")</td>
+                                            <td class="text-end pe-4">
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(p.Id)">Eliminar</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string userId = "";
+    private List<Presupuesto>? presupuestos;
+    private List<Categoria> categoriasEgreso = [];
+    private string? errorMessage;
+    private NuevoPresupuestoModel nuevo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        var now = DateTime.Now;
+        nuevo.Mes = now.Month;
+        nuevo.Anio = now.Year;
+        var cats = await FinancialService.GetCategoriasAsync(userId);
+        categoriasEgreso = cats.Where(c => c.Tipo == TipoTransaccion.Egreso).ToList();
+        presupuestos = await FinancialService.GetPresupuestosAsync(userId, now.Month, now.Year);
+    }
+
+    private async Task CrearPresupuesto()
+    {
+        errorMessage = null;
+        try
+        {
+            await FinancialService.CreatePresupuestoAsync(nuevo.CategoriaId, nuevo.Mes, nuevo.Anio, nuevo.Limite, userId);
+            nuevo = new NuevoPresupuestoModel { Mes = nuevo.Mes, Anio = nuevo.Anio };
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task Eliminar(Guid id)
+    {
+        await FinancialService.DeletePresupuestoAsync(id, userId);
+        await Cargar();
+    }
+
+    private sealed class NuevoPresupuestoModel
+    {
+        public Guid CategoriaId { get; set; }
+        public int Mes { get; set; } = DateTime.Now.Month;
+        public int Anio { get; set; } = DateTime.Now.Year;
+        public decimal Limite { get; set; }
+    }
+}

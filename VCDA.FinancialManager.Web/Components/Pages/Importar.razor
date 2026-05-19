@@ -1,0 +1,121 @@
+@page "/importar"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using VCDA.FinancialManager.Domain.Entities
+@using VCDA.FinancialManager.Web.Models
+@using VCDA.FinancialManager.Web.Services
+@inject FinancialService FinancialService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Importar CSV</PageTitle>
+
+<div class="container-fluid py-4 animated-fade-in">
+    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-upload me-2"></span> Importación masiva CSV</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Formato: <code>Fecha (YYYY-MM-DD), Descripcion, Monto, Tipo (Ingreso/Egreso), Categoria, Cuenta</code>
+            </p>
+            <InputFile OnChange="OnFileSelected" class="form-control" accept=".csv,text/csv" />
+        </div>
+    </div>
+
+    @if (parsedRows.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Vista previa</span>
+                <span class="badge bg-primary">@parsedRows.Count(r => r.IsValid) válidas / @parsedRows.Count total</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm m-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">#</th>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Monto</th>
+                                <th>Tipo</th>
+                                <th>Categoría</th>
+                                <th>Cuenta</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in parsedRows)
+                            {
+                                <tr class="@(row.IsValid ? "" : "table-danger")">
+                                    <td class="ps-3">@row.LineNumber</td>
+                                    <td>@(row.Fecha?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                    <td>@row.Descripcion</td>
+                                    <td>@(row.Monto?.ToString("N2") ?? "-")</td>
+                                    <td>@(row.Tipo?.ToString() ?? "-")</td>
+                                    <td>@row.CategoriaNombre</td>
+                                    <td>@row.CuentaNombre</td>
+                                    <td>@(row.IsValid ? "OK" : row.ErrorMessage)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                @if (!string.IsNullOrEmpty(importMessage))
+                {
+                    <div class="alert alert-info mb-3">@importMessage</div>
+                }
+                <button class="btn btn-primary" disabled="@(!parsedRows.Any(r => r.IsValid))" @onclick="ConfirmarImportacion">
+                    Confirmar importación (@parsedRows.Count(r => r.IsValid) filas)
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string userId = "";
+    private List<CsvImportRow> parsedRows = [];
+    private List<Cuenta> cuentas = [];
+    private List<Categoria> categorias = [];
+    private string? importMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        cuentas = await FinancialService.GetCuentasAsync(userId);
+        categorias = await FinancialService.GetCategoriasAsync(userId);
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        importMessage = null;
+        var file = e.File;
+        if (file is null) return;
+
+        await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+        parsedRows = CsvImportParser.Parse(content, cuentas, categorias);
+    }
+
+    private async Task ConfirmarImportacion()
+    {
+        try
+        {
+            var count = await FinancialService.ImportTransaccionesBatchAsync(parsedRows, userId);
+            importMessage = $"Se importaron {count} transacciones correctamente.";
+            cuentas = await FinancialService.GetCuentasAsync(userId);
+            parsedRows = [];
+        }
+        catch (Exception ex)
+        {
+            importMessage = $"Error en la importación: {ex.Message}";
+        }
+    }
+}
