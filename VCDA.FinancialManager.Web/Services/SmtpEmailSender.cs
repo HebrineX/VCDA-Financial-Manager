@@ -46,7 +46,7 @@ internal sealed class SmtpEmailSender(
 
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
-        ValidateConfiguration();
+        options.Validate();
 
         using var message = new MailMessage
         {
@@ -70,19 +70,6 @@ internal sealed class SmtpEmailSender(
 
         await client.SendMailAsync(message);
         logger.LogInformation("SMTP email sent to {Email} with subject {Subject}", toEmail, subject);
-    }
-
-    private void ValidateConfiguration()
-    {
-        if (string.IsNullOrWhiteSpace(options.Host))
-        {
-            throw new InvalidOperationException("SMTP no configurado: falta Smtp:Host.");
-        }
-
-        if (string.IsNullOrWhiteSpace(options.FromEmail))
-        {
-            throw new InvalidOperationException("SMTP no configurado: falta Smtp:FromEmail.");
-        }
     }
 
     private static string GetGreetingSuffix(ApplicationUser user)

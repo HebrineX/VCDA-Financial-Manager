@@ -1,145 +1,127 @@
 # VCDA-Financial-Manager
 
-Aplicación web de finanzas personales construida con **.NET 10** y **Blazor Server**. Permite gestionar cuentas, transacciones, categorías, presupuestos mensuales, reportes exportables e importación masiva desde CSV, con aislamiento de datos por usuario y panel de administración.
+VCDA-Financial-Manager es una aplicacion web de finanzas personales construida con Blazor Server y ASP.NET Core. Permite administrar cuentas, transacciones, categorias, presupuestos mensuales, reportes, exportacion/importacion CSV y usuarios con roles `Admin` y `User`.
 
-Repositorio objetivo de release `1.0`:
-
-- [HebrineX/VCDA-Financial-Manager](https://github.com/HebrineX/VCDA-Financial-Manager.git)
+El objetivo de la version `2.0` es entregar una app autocontenida, ejecutable localmente o con Docker, con SQLite persistido, SMTP configurable, HTTPS detras de Nginx y configuracion publica segura mediante `.env`.
 
 ## Stack
 
-| Capa | Tecnología |
-|------|------------|
-| UI | Blazor Web App (Interactive Server) |
-| Backend | ASP.NET Core .NET 10 |
-| Identidad | ASP.NET Core Identity (roles Admin / User) |
-| Base de datos | SQLite persistido en contenedor/local |
+| Capa | Tecnologia |
+| --- | --- |
+| UI | Blazor Web App, Interactive Server |
+| Backend | ASP.NET Core / .NET |
+| Identidad | ASP.NET Core Identity |
+| Base de datos | SQLite |
 | Email | SMTP configurable |
-| Logging | Serilog |
-| Contenedores | Docker + docker-compose |
+| Reverse proxy | Nginx |
+| Contenedores | Docker + Docker Compose |
 | Tests | xUnit |
+
+## Fases del producto
+
+- **Fase 1 - Base funcional**: dominio financiero, cuentas, categorias y transacciones.
+- **Fase 2 - Presupuestos y reportes**: presupuestos mensuales, filtros, totales, graficos y CSV.
+- **Fase 3 - Importacion**: carga masiva CSV con vista previa, validacion por fila e insercion atomica.
+- **Fase 4 - Identity/Admin**: registro, login, roles, panel admin, bloqueo de usuarios y aislamiento por usuario.
+- **Fase 5 - Docker/HTTPS/operacion**: Docker Compose, Nginx, HTTPS local, SMTP, SQLite persistido, reset controlado y DataProtection.
+- **Fase 6 - Docs/config publica**: README autosuficiente y `.env.example` sin secretos reales.
 
 ## Prerrequisitos
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- (Opcional) [Docker Desktop](https://www.docker.com/products/docker-desktop/) para ejecutar en contenedor
+- .NET SDK compatible con el proyecto.
+- Docker Desktop, si vas a ejecutar la version contenerizada.
+- PowerShell 7 o Windows PowerShell para los comandos de certificados en Windows.
 
-## Setup local
+## Ejecucion local sin Docker
 
-```bash
-git clone https://github.com/HebrineX/VCDA-Financial-Manager.git
-cd VCDA-Financial-Manager
+```powershell
 dotnet restore
-dotnet ef database update --project VCDA.FinancialManager.Web
+dotnet build
+dotnet test
 dotnet run --project VCDA.FinancialManager.Web
 ```
 
-La aplicación queda disponible en `https://localhost:7xxx` (ver consola).
+La consola indica la URL local de Kestrel. Para una experiencia equivalente a produccion, usa Docker Compose con Nginx y HTTPS.
 
-### Usuario administrador por defecto
+## Ejecucion con Docker
 
-Tras el primer arranque se crea automáticamente:
+1. Crea tu archivo de entorno local:
 
-| Campo | Valor |
-|-------|-------|
-| Usuario | `HebrineX` |
-| Email | `Biancolucasgerman@gmail.com` |
-| Contraseña | `Admin123!` |
-| Rol | Admin |
+```powershell
+Copy-Item .env.example .env
+```
 
-Los usuarios que se registren reciben el rol **User** y solo ven sus propios datos.
+2. Edita `.env` y reemplaza todos los placeholders por valores propios. No guardes secretos reales en Git.
 
-## Setup con Docker
+3. Genera o copia los certificados requeridos en `docker-data/certs/`.
 
-```bash
-copy .env.example .env
+4. Levanta la app:
+
+```powershell
 docker compose up --build
 ```
 
-Abrir `https://localhost:8443` con Nginx local al frente del contenedor web. El puerto HTTP `8080` queda disponible solo para redirigir a HTTPS.
+La app queda disponible en `https://localhost:8443`. El puerto `8080` publica HTTP solo para redirigir a HTTPS.
 
-Los volúmenes locales persisten claves de DataProtection y el certificado X.509 en `docker-data/`.
-La base SQLite queda persistida en `docker-data/app/`.
+### Puertos y URL publica
 
-Para limpiar datos de prueba en el próximo arranque Docker, configura en `.env`:
+Docker Compose usa estas variables:
 
 ```env
-APP_RESET_DATABASE_ON_START=true
+APP_HTTP_PORT=8080
+APP_HTTPS_PORT=8443
+APP_PUBLIC_BASE_URL=https://localhost:8443
 ```
 
-Luego ejecuta `docker compose up --build`. El contenedor borra y recrea la base SQLite, conservando certificados y secretos. Después del reset, vuelve a dejar esa variable en `false` para no borrar datos en cada arranque.
+`APP_PUBLIC_BASE_URL` es la URL absoluta que la app usa para links enviados por email, como confirmacion de cuenta y recuperacion de contrasena. En local con Nginx debe coincidir con el host y puerto HTTPS publicados. En produccion o tunel debe ser el dominio publico real, por ejemplo `https://finanzas.tudominio.com`.
 
-### SMTP, confirmación de email y recuperación de contraseña
-
-Para que funcionen verificación de email y reset de contraseña, completa en `.env`:
+Si expones la app en LAN, usa la IP o nombre DNS accesible por otros equipos:
 
 ```env
-APP_PUBLIC_BASE_URL=https://localhost:8443
+APP_PUBLIC_BASE_URL=https://192.168.1.50:8443
+```
+
+Si expones Internet, termina TLS con un certificado confiable y usa el dominio final:
+
+```env
+APP_PUBLIC_BASE_URL=https://finanzas.tudominio.com
+```
+
+## SMTP
+
+Las funciones de confirmacion de email y recuperacion de contrasena dependen de SMTP. Completa estas variables en `.env`:
+
+```env
 Smtp__Host=smtp.tu-proveedor.com
 Smtp__Port=587
 Smtp__EnableSsl=true
-Smtp__FromEmail=tu-cuenta@dominio.com
+Smtp__FromEmail=notificaciones@tudominio.com
 Smtp__FromName=VCDA-Financial-Manager
-Smtp__Username=tu-cuenta@dominio.com
-Smtp__Password=tu-password-smtp
+Smtp__Username=notificaciones@tudominio.com
+Smtp__Password=usa-un-secreto-local
 ```
 
-Si usas Gmail, normalmente necesitas contraseña de aplicación en lugar de tu password normal.
+Para Gmail u otros proveedores con MFA, normalmente necesitas una contrasena de aplicacion. No uses tu contrasena personal.
 
-`APP_PUBLIC_BASE_URL` define la URL que aparece dentro de los emails de confirmación y recuperación. En local con Nginx debe ser `https://localhost:8443`; en un despliegue real debe apuntar al dominio público, por ejemplo `https://finanzas.tudominio.com`.
+## HTTPS con Nginx
 
-### Plan de imagen base 1.0 sin ACR
+El servicio `nginx` actua como reverse proxy:
 
-Nombre objetivo:
+- Publica `https://localhost:8443` hacia el servicio `web`.
+- Mantiene `http://localhost:8080` solo para redireccionar a HTTPS.
+- Reenvia WebSockets para Blazor Server.
+- Envia `X-Forwarded-Proto=https` y `X-Forwarded-Host`.
+- Limita el tamano de request a `5m`.
+- Agrega headers basicos de seguridad.
 
-- Imagen versionada `vcda-financial-manager:1.0.0`.
+Nginx espera estos archivos:
 
-Opciones de distribución sin ACR:
-
-- Docker Hub público. Una cuenta gratuita alcanza para publicar esta imagen si no necesitás repositorio privado.
-- GHCR si el repositorio queda alojado en GitHub y preferís publicar desde `HebrineX/VCDA-Financial-Manager`.
-- Export manual con `docker save` para entrega cerrada.
-
-Publicación sugerida en Docker Hub:
-
-```bash
-docker build -t hebrinex/vcda-financial-manager:1.0.0 .
-docker login
-docker push hebrinex/vcda-financial-manager:1.0.0
+```text
+docker-data/certs/nginx.crt
+docker-data/certs/nginx.key
 ```
 
-Si usás cuenta gratuita:
-
-- Docker Hub gratis alcanza para publicar imágenes públicas.
-- Si querés evitar límites o mantener todo junto al repo, `GHCR` es una alternativa muy cómoda para `HebrineX`.
-
-Publicación sugerida en GHCR:
-
-```bash
-docker build -t ghcr.io/hebrinex/vcda-financial-manager:1.0.0 .
-docker login ghcr.io
-docker push ghcr.io/hebrinex/vcda-financial-manager:1.0.0
-```
-
-Checklist mínimo para cerrar la 1.0:
-
-- Unificar el naming de imagen entre `Dockerfile`, `docker-compose.yml` y documentación.
-- Sacar secretos hardcodeados del `docker-compose.yml` y pasarlos por variables o archivo externo no versionado.
-- Documentar cómo generar o proveer `docker-data/certs/dataprotection.pfx` y su password.
-- Definir persistencia explícita para SQLite dentro del contenedor.
-- Validar login, dashboard, reportes, importación CSV y panel admin con la imagen versionada.
-- Correr `dotnet build` y `dotnet test` antes de publicar.
-
-### Nginx local con HTTPS
-
-El proyecto ya incluye un servicio `nginx` como reverse proxy local para Blazor Server y WebSockets.
-
-- `web` queda expuesto solo dentro de la red de Docker.
-- `nginx` publica `https://localhost:8443`.
-- `nginx` conserva `http://localhost:8080` solo para redirigir a HTTPS.
-- TLS termina en Nginx y la app recibe `X-Forwarded-Proto=https`.
-
-Para generar un certificado local autofirmado para Nginx:
+Para desarrollo local puedes crear un certificado autofirmado:
 
 ```powershell
 $certDir = Join-Path (Get-Location) 'docker-data\certs'
@@ -157,15 +139,6 @@ $san.AddDnsName('localhost')
 $san.AddIpAddress([System.Net.IPAddress]::Parse('127.0.0.1'))
 $san.AddIpAddress([System.Net.IPAddress]::Parse('::1'))
 $req.CertificateExtensions.Add($san.Build())
-$req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($false, $false, 0, $true))
-$req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(
-  [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature -bor
-  [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment,
-  $true))
-
-$oids = [System.Security.Cryptography.OidCollection]::new()
-[void]$oids.Add([System.Security.Cryptography.Oid]::new('1.3.6.1.5.5.7.3.1'))
-$req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($oids, $true))
 
 $cert = $req.CreateSelfSigned([DateTimeOffset]::Now.AddDays(-1), [DateTimeOffset]::Now.AddYears(2))
 $certPem = [System.Security.Cryptography.PemEncoding]::WriteString(
@@ -177,91 +150,155 @@ Set-Content -LiteralPath (Join-Path $certDir 'nginx.crt') -Value $certPem -NoNew
 Set-Content -LiteralPath (Join-Path $certDir 'nginx.key') -Value $keyPem -NoNewline -Encoding ascii
 ```
 
-El navegador puede mostrar advertencia por ser autofirmado. Para evitar advertencias en LAN o Internet, usá un certificado confiable de Let's Encrypt, Cloudflare Tunnel, ngrok o un reverse proxy con TLS válido.
+El navegador puede mostrar advertencia por ser autofirmado. Para uso real, usa Let's Encrypt, Cloudflare Tunnel, ngrok, un proxy corporativo o cualquier certificado emitido por una CA confiable.
 
-### Exponer en red local o Internet
+## DataProtection PFX
 
-Para exponerlo dentro de tu red local, define en `.env` el puerto y la URL pública que usarán los emails:
+ASP.NET Core DataProtection protege cookies, tokens de confirmacion y tokens de recuperacion. En Docker, las claves se persisten en:
 
-```env
-APP_HTTP_PORT=8080
-APP_HTTPS_PORT=8443
-APP_PUBLIC_BASE_URL=https://IP_DE_TU_PC:8443
-APP_RESET_DATABASE_ON_START=false
+```text
+docker-data/dataprotection/
 ```
 
-Luego levantá:
+El proyecto tambien permite cifrar esas claves en reposo con un certificado X.509 PFX montado como:
 
-```bash
+```text
+docker-data/certs/dataprotection.pfx
+```
+
+La contrasena del PFX se configura con:
+
+```env
+DATAPROTECTION_CERT_PASSWORD=usa-un-secreto-local-largo
+```
+
+Genera un PFX local para desarrollo:
+
+```powershell
+$certDir = Join-Path (Get-Location) 'docker-data\certs'
+New-Item -ItemType Directory -Force -Path $certDir | Out-Null
+
+$password = Read-Host 'Password para DATAPROTECTION_CERT_PASSWORD' -AsSecureString
+$cert = New-SelfSignedCertificate `
+  -Subject 'CN=VCDA DataProtection' `
+  -KeyAlgorithm RSA `
+  -KeyLength 2048 `
+  -KeyExportPolicy Exportable `
+  -CertStoreLocation 'Cert:\CurrentUser\My' `
+  -NotAfter (Get-Date).AddYears(5)
+
+Export-PfxCertificate `
+  -Cert $cert `
+  -FilePath (Join-Path $certDir 'dataprotection.pfx') `
+  -Password $password
+```
+
+Usa el mismo valor escrito en `Read-Host` para `DATAPROTECTION_CERT_PASSWORD` dentro de `.env`. En produccion, rota y custodia este secreto fuera del repositorio.
+
+## SQLite y backup
+
+La base SQLite se persiste en:
+
+```text
+docker-data/app/
+```
+
+Antes de actualizar la imagen o hacer mantenimiento, deten la app y copia el directorio completo:
+
+```powershell
+docker compose down
+Copy-Item -Recurse docker-data\app docker-data\backup-app-$(Get-Date -Format yyyyMMdd-HHmmss)
+```
+
+Para restaurar, deten los contenedores, reemplaza `docker-data/app/` por el backup y vuelve a levantar:
+
+```powershell
 docker compose up --build -d
 ```
 
-En Windows, permití el puerto en el firewall:
+## Reset controlado de base de datos
 
-```powershell
-New-NetFirewallRule -DisplayName "VCDA Financial Manager HTTPS 8443" -Direction Inbound -Protocol TCP -LocalPort 8443 -Action Allow
-```
-
-Desde otro equipo de la misma red, abrí `https://IP_DE_TU_PC:8443`.
-
-Para Internet, necesitás redirigir en el router el puerto externo `443` hacia `IP_DE_TU_PC:8443`, o usar un túnel/reverse proxy con TLS. Seteá siempre:
+Para borrar y recrear la base en el proximo arranque Docker:
 
 ```env
-APP_PUBLIC_BASE_URL=https://tu-dominio-o-tunel
+APP_RESET_DATABASE_ON_START=true
 ```
 
-Controles activos antes de exponer:
+Luego ejecuta:
 
-- confirmación de email obligatoria
-- email único por usuario
-- bloqueo temporal tras 5 intentos fallidos
-- política de contraseña reforzada
-- cookies `HttpOnly` y sesión expirable
-- rate limiting global por IP
-- headers `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`
-- tamaño máximo de request en Nginx limitado a `5m`
+```powershell
+docker compose up --build
+```
 
-## Funcionalidades principales
+Vuelve a dejar `APP_RESET_DATABASE_ON_START=false` despues del reset. Si queda en `true`, cada arranque puede destruir datos.
 
-- **Dashboard**: patrimonio, ingresos/egresos del mes, movimientos recientes, distribución de gastos, barras de presupuesto y tendencia financiera histórica.
-- **Gráficos SVG**: visuales de dashboard y reportes sin dependencias externas.
-- **Cuentas y transacciones**: saldos actualizados de forma atómica; transacciones inmutables.
-- **Presupuestos**: límite mensual por categoría de egreso.
-- **Reportes**: filtros, paginación, totales y gráfico histórico de ingresos, egresos y balance de los últimos 6 meses.
-- **Exportar CSV**: descarga sin dependencias externas (`/api/reportes/exportar-csv`).
-- **Importar CSV**: vista previa con validación por fila e inserción atómica.
-- **Admin**: listado de usuarios y activar/desactivar acceso (lockout).
-- **Identity por email**: confirmación de cuenta, reenvío de confirmación y recuperación de contraseña vía SMTP.
+## Admin seed seguro
 
-### Formato CSV de importación
+El seed administrador se controla desde `.env`. Docker Compose mapea estas variables a `AdminSeed__...` dentro del contenedor. Para una DB nueva, habilitalo explicitamente con valores propios; para una DB existente o registro manual, dejalo apagado:
+
+```env
+ADMIN_SEED_ENABLED=true
+ADMIN_SEED_USERNAME=admin-local
+ADMIN_SEED_EMAIL=admin@example.local
+ADMIN_SEED_PASSWORD=REEMPLAZAR_CON_PASSWORD_LARGO_UNICO
+```
+
+Notas de seguridad:
+
+- Cambia siempre el password inicial antes de exponer la app.
+- Usa un email controlado por el operador del despliegue.
+- No reutilices passwords personales ni passwords de otros sistemas.
+- Si el build aun conserva credenciales de fallback, tratalas como deuda critica y rota el admin apenas inicie.
+- El archivo `.env` local no debe subirse al repositorio.
+
+## Comandos de build y test
+
+```powershell
+dotnet restore
+dotnet build
+dotnet test
+docker compose build
+docker compose up -d
+docker compose logs -f web
+docker compose down
+```
+
+Para validar una imagen versionada:
+
+```powershell
+docker build -t vcda-financial-manager:2.0.0 .
+docker run --rm vcda-financial-manager:2.0.0
+```
+
+En el flujo Compose, la imagen local esperada es `vcda-financial-manager:2.0.0`.
+
+## CSV de importacion
+
+Formato esperado:
 
 ```csv
 Fecha,Descripcion,Monto,Tipo,Categoria,Cuenta
 2026-05-01,Supermercado,1500.50,Egreso,Comida,Efectivo
 ```
 
-## Capturas de pantalla
+## Gaps conocidos antes de produccion
 
-> Añade aquí capturas del dashboard, login y reportes cuando despliegues la app (`docs/screenshots/`).
+- Confirmar que el seed admin configurable por `ADMIN_SEED_*` este definido solo cuando se necesite bootstrap inicial.
+- Reemplazar cualquier credencial de fallback por configuracion externa obligatoria.
+- Usar certificados confiables para Internet o LAN compartida.
+- Guardar `.env`, PFX y backups fuera de Git y con permisos restringidos.
+- Validar restore de backup SQLite antes de depender de el operacionalmente.
+- Revisar limites de rate limiting, tamano de request y politicas de cookies para el dominio final.
+- Ejecutar `dotnet build`, `dotnet test` y una prueba manual de login, SMTP, reportes, CSV y admin antes de publicar.
 
-## Tests
+## Estructura principal
 
-```bash
-dotnet test
+```text
+VCDA.FinancialManager.Domain/          Entidades y enums
+VCDA.FinancialManager.Web/             Blazor, Identity, EF, servicios
+VCDA.FinancialManager.Domain.Tests/    Tests de dominio
+docker-compose.yml                     Orquestacion local
+Dockerfile                             Imagen de la app
+nginx/                                 Reverse proxy HTTPS
+.env.example                           Plantilla publica sin secretos reales
 ```
-
-## Estructura del repositorio
-
-```
-VCDA.FinancialManager.Domain/     # Entidades y enums
-VCDA.FinancialManager.Web/        # Blazor, Identity, EF, servicios
-VCDA.FinancialManager.Domain.Tests/
-.hebrinex/                        # Specs y progreso del harness
-docker-compose.yml
-Dockerfile
-nginx/
-```
-
-## Documentación de arquitectura
-
-Ver [.hebrinex/orquestador/context/architecture.md](.hebrinex/orquestador/context/architecture.md).

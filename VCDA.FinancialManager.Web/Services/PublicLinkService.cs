@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace VCDA.FinancialManager.Web.Services;
 
-internal sealed class PublicLinkService(IConfiguration configuration, NavigationManager navigationManager)
+internal sealed class PublicLinkService(IConfiguration configuration, NavigationManager navigationManager, IWebHostEnvironment environment)
 {
     public string Build(string relativePath, IDictionary<string, object?> queryParameters)
     {
@@ -11,6 +11,13 @@ internal sealed class PublicLinkService(IConfiguration configuration, Navigation
         var absoluteBaseUrl = string.IsNullOrWhiteSpace(baseUrl)
             ? navigationManager.BaseUri
             : EnsureTrailingSlash(baseUrl);
+
+        if (environment.IsProduction()
+            && (!Uri.TryCreate(absoluteBaseUrl, UriKind.Absolute, out var configuredUri)
+                || configuredUri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException("App:PublicBaseUrl debe ser una URL absoluta HTTPS en Production.");
+        }
 
         var path = relativePath.TrimStart('/');
         var absoluteUrl = new Uri(new Uri(absoluteBaseUrl), path).AbsoluteUri;

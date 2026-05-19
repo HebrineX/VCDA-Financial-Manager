@@ -1,6 +1,6 @@
 services:
   web:
-    image: vcda-financial-manager:1.0.0
+    image: vcda-financial-manager:2.0.0
     build:
       context: .
       dockerfile: Dockerfile
@@ -14,6 +14,11 @@ services:
       - App__EnforceHttps=false
       - App__PublicBaseUrl=${APP_PUBLIC_BASE_URL:-https://localhost:8443}
       - App__ResetDatabaseOnStartup=${APP_RESET_DATABASE_ON_START:-false}
+      - App__TrustedProxyNetworks__0=${APP_TRUSTED_PROXY_NETWORKS:-172.16.0.0/12}
+      - AdminSeed__Enabled=${ADMIN_SEED_ENABLED:-false}
+      - AdminSeed__Email=${ADMIN_SEED_EMAIL:-}
+      - AdminSeed__UserName=${ADMIN_SEED_USERNAME:-}
+      - AdminSeed__Password=${ADMIN_SEED_PASSWORD:-}
       - DATAPROTECTION_CERT_PATH=/app/certs/dataprotection.pfx
       - DATAPROTECTION_CERT_PASSWORD=${DATAPROTECTION_CERT_PASSWORD}
       - Smtp__Host=${Smtp__Host}

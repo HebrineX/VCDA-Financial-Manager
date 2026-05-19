@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Net;
 using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -21,8 +22,16 @@ var resetDatabaseOnStartup = builder.Configuration.GetValue("App:ResetDatabaseOn
 builder.Services.AddScoped<FinancialService>();
 builder.Services.AddScoped<AdminUserService>();
 builder.Services.AddScoped<PublicLinkService>();
+builder.Services.AddOptions<AdminSeedOptions>()
+    .Bind(builder.Configuration.GetSection(AdminSeedOptions.SectionName))
+    .Validate(options => !builder.Environment.IsProduction() || !options.Enabled || options.IsConfigured,
+        "AdminSeed debe estar completo en Production cuando está habilitado.")
+    .ValidateOnStart();
 builder.Services.AddOptions<SmtpOptions>()
-    .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName));
+    .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName))
+    .Validate(options => !builder.Environment.IsProduction() || options.IsConfigured,
+        "SMTP debe estar completo en Production.")
+    .ValidateOnStart();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole(AppRoles.Admin));
@@ -116,14 +125,35 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsProduction()
+        ? CookieSecurePolicy.Always
+        : CookieSecurePolicy.SameAsRequest;
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
 });
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
+    options.ForwardLimit = 1;
+
+    foreach (var proxy in builder.Configuration.GetSection("App:TrustedProxies").Get<string[]>() ?? [])
+    {
+        if (IPAddress.TryParse(proxy, out var address))
+        {
+            options.KnownProxies.Add(address);
+        }
+    }
+
+    foreach (var network in builder.Configuration.GetSection("App:TrustedProxyNetworks").Get<string[]>() ?? [])
+    {
+        var parts = network.Split('/', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length == 2
+            && IPAddress.TryParse(parts[0], out var prefix)
+            && int.TryParse(parts[1], out var prefixLength))
+        {
+            options.KnownIPNetworks.Add(new System.Net.IPNetwork(prefix, prefixLength));
+        }
+    }
 });
 
 var app = builder.Build();
@@ -132,6 +162,11 @@ using (var scope = app.Services.CreateScope())
 {
     if (resetDatabaseOnStartup)
     {
+        if (app.Environment.IsProduction())
+        {
+            throw new InvalidOperationException("App:ResetDatabaseOnStartup no puede usarse en Production.");
+        }
+
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await context.Database.EnsureDeletedAsync();
         Log.Warning("Base de datos reiniciada por App:ResetDatabaseOnStartup=true.");
@@ -148,6 +183,9 @@ app.Use(async (context, next) =>
     context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
     context.Response.Headers.TryAdd("Referrer-Policy", "no-referrer");
     context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    context.Response.Headers.TryAdd(
+        "Content-Security-Policy",
+        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:;");
     await next();
 });
 app.UseRateLimiter();
