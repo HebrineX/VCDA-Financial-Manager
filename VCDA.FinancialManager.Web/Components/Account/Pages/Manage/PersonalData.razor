@@ -6,23 +6,23 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Datos personales - VCDA-Financial-Manager</PageTitle>
+<PageTitle>@T["Identity.PersonalData.Title"] - @T["Identity.BrandSuffix"]</PageTitle>
 
 <StatusMessage />
-<h3>Datos personales</h3>
+<h3>@T["Identity.PersonalData.Title"]</h3>
 
 <div class="row">
     <div class="col-md-6">
-        <p>Tu cuenta contiene datos personales que proporcionaste a VCDA-Financial-Manager. Desde esta pantalla podés descargarlos o eliminar tu cuenta.</p>
+        <p>@T["Identity.PersonalData.Description"]</p>
         <p>
-            <strong>Eliminar estos datos borra permanentemente tu cuenta y no se puede recuperar.</strong>
+            <strong>@T["Identity.DeletePersonalData.Warning"]</strong>
         </p>
         <form action="/Account/Manage/DownloadPersonalData" method="post">
             <AntiforgeryToken />
-            <button class="btn btn-primary" type="submit">Descargar datos</button>
+            <button class="btn btn-primary" type="submit">@T["Identity.PersonalData.Download"]</button>
         </form>
         <p>
-            <a href="/Account/Manage/DeletePersonalData" class="btn btn-danger">Eliminar cuenta</a>
+            <a href="/Account/Manage/DeletePersonalData" class="btn btn-danger">@T["Identity.PersonalData.Delete"]</a>
         </p>
     </div>
 </div>

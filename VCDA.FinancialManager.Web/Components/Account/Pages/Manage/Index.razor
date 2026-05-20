@@ -2,39 +2,55 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using VCDA.FinancialManager.Web.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
+@inject ApplicationDbContext DbContext
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Profile</PageTitle>
+<PageTitle>@T["Identity.Manage.ProfileTitle"] - @T["Identity.BrandSuffix"]</PageTitle>
 
-<h3>Profile</h3>
+<h3>@T["Identity.Manage.ProfileTitle"]</h3>
 <StatusMessage />
 
 <div class="row">
     <div class="col-xl-6">
+        <div class="vcda-account-guide-panel mb-4" data-tutorial-account-user="@(user?.Id ?? nickname ?? "anonymous")">
+            <div>
+                <span class="vcda-kicker mb-2">@T["Identity.Manage.GuideTitle"]</span>
+                <p class="mb-0 text-muted">@T["Identity.Manage.GuideDescription"]</p>
+            </div>
+            <div class="d-flex flex-column flex-sm-row gap-2 mt-3">
+                <button type="button" class="btn btn-primary" onclick="window.openVcdaTutorial()">@T["Identity.Manage.GuideOpen"]</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.reactivateVcdaTutorial()">@T["Identity.Manage.GuideReactivate"]</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.markVcdaTutorialSeen()">@T["Identity.Manage.GuideSeen"]</button>
+            </div>
+            <p id="tutorialAccountStatus" class="small text-muted mt-3 mb-0 d-none" role="status"></p>
+        </div>
+
         <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Choose your username." disabled />
-                <label for="username" class="form-label">Username</label>
+                <InputText @bind-Value="Input.Nickname" id="Input.Nickname" class="form-control" autocomplete="nickname" aria-required="true" placeholder="@T["Identity.Register.NicknamePlaceholder"]" />
+                <label for="Input.Nickname" class="form-label">@T["Identity.NicknameUser"]</label>
+                <ValidationMessage For="() => Input.Nickname" class="text-danger" />
             </div>
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" />
-                <label for="Input.PhoneNumber" class="form-label">Phone number</label>
+                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="@T["Identity.PhoneNumber"]" />
+                <label for="Input.PhoneNumber" class="form-label">@T["Identity.PhoneNumber"]</label>
                 <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">@T["Identity.Save"]</button>
         </EditForm>
     </div>
 </div>
 
 @code {
     private ApplicationUser? user;
-    private string? username;
+    private string? nickname;
     private string? phoneNumber;
 
     [CascadingParameter]
@@ -54,9 +70,13 @@
             return;
         }
 
-        username = await UserManager.GetUserNameAsync(user);
+        nickname = string.IsNullOrWhiteSpace(user.Nickname)
+            ? await UserManager.GetUserNameAsync(user)
+            : user.Nickname;
+        nickname ??= user.Email ?? user.Id;
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
 
+        Input.Nickname ??= nickname;
         Input.PhoneNumber ??= phoneNumber;
     }
 
@@ -68,24 +88,63 @@
             return;
         }
 
+        var requestedNickname = NormalizeNickname(Input.Nickname);
+        if (!string.Equals(requestedNickname, nickname, StringComparison.Ordinal))
+        {
+            var normalizedNickname = UserManager.NormalizeName(requestedNickname) ?? requestedNickname.ToUpperInvariant();
+            var nicknameTaken = await DbContext.Users.AnyAsync(existingUser =>
+                existingUser.Id != user.Id && existingUser.NormalizedNickname == normalizedNickname);
+
+            if (nicknameTaken)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus($"{T["Identity.ErrorPrefix"]}: {T["Identity.Manage.NicknameTaken"]}", HttpContext);
+                return;
+            }
+
+            var setUserNameResult = await UserManager.SetUserNameAsync(user, requestedNickname);
+            if (!setUserNameResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus($"{T["Identity.ErrorPrefix"]}: {T["Identity.Manage.UserUpdateFailed"]}", HttpContext);
+                return;
+            }
+
+            user.Nickname = requestedNickname;
+            user.NormalizedNickname = normalizedNickname;
+
+            var updateUserResult = await UserManager.UpdateAsync(user);
+            if (!updateUserResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus($"{T["Identity.ErrorPrefix"]}: {T["Identity.Manage.NicknameUpdateFailed"]}", HttpContext);
+                return;
+            }
+        }
+
         if (Input.PhoneNumber != phoneNumber)
         {
             var setPhoneResult = await UserManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
             if (!setPhoneResult.Succeeded)
             {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
+                RedirectManager.RedirectToCurrentPageWithStatus($"{T["Identity.ErrorPrefix"]}: {T["Identity.Manage.PhoneUpdateFailed"]}", HttpContext);
                 return;
             }
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+        RedirectManager.RedirectToCurrentPageWithStatus(T["Identity.Manage.ProfileUpdated"], HttpContext);
     }
+
+    private static string NormalizeNickname(string nickname) => nickname.Trim();
 
     private sealed class InputModel
     {
+        [Required(ErrorMessage = "El nickname es obligatorio.")]
+        [StringLength(32, MinimumLength = 3, ErrorMessage = "El nickname debe tener entre {2} y {1} caracteres.")]
+        [RegularExpression(@"^[a-zA-Z0-9_.-]+$", ErrorMessage = "Usa solo letras, numeros, guion, guion bajo o punto.")]
+        [Display(Name = "Nickname")]
+        public string Nickname { get; set; } = "";
+
         [Phone]
-        [Display(Name = "Phone number")]
+        [Display(Name = "Telefono")]
         public string? PhoneNumber { get; set; }
     }
 }

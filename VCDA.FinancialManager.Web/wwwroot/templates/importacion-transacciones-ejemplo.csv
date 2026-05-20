@@ -1,5 +1,6 @@
 Fecha,Descripcion,Monto,Tipo,Categoria,Cuenta
 2026-05-01,Sueldo mensual,1500000.00,Ingreso,Sueldo,Cuenta principal
-2026-05-02,Supermercado,84500.75,Egreso,Alimentos,Cuenta principal
+2026-05-02,"Supermercado, compra semanal",84500.75,Egreso,Alimentos,Cuenta principal
 2026-05-03,Transferencia recibida,25000.00,Ingreso,Otros ingresos,Cuenta principal
 2026-05-04,Servicio de internet,32000.00,Egreso,Servicios,Cuenta principal
+2026-05-05,Honorarios freelance,180000.50,Ingreso,Otros ingresos,Cuenta principal

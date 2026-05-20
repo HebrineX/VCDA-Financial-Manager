@@ -8,7 +8,7 @@
 @inject FinancialService FinancialService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Transacciones - VCDA-Financial-Manager</PageTitle>
+<PageTitle>@T["Transactions.Title"] - @T["App.BrandName"]</PageTitle>
 
 <div class="container-fluid py-4">
     <div class="row">
@@ -16,24 +16,24 @@
         <div class="col-lg-8 mb-4">
             <div class="card shadow-sm border-0">
                 <div class="card-header d-flex align-items-center py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2"></i> Historial de Movimientos</h5>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2"></i> @T["Transactions.History"]</h5>
                 </div>
                 <div class="card-body p-0">
                     @if (transacciones == null)
                     {
                         <div class="text-center py-5">
                             <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Cargando...</span>
+                                <span class="visually-hidden">@T["Common.Loading"]</span>
                             </div>
-                            <p class="mt-2 text-muted">Cargando movimientos...</p>
+                            <p class="mt-2 text-muted">@T["Transactions.Loading"]</p>
                         </div>
                     }
                     else if (!transacciones.Any())
                     {
                         <div class="text-center py-5">
                             <i class="bi bi-file-earmark-diff display-1 text-muted"></i>
-                            <h5 class="mt-3 text-muted">No hay movimientos registrados</h5>
-                            <p class="text-muted small">Registra tu primer ingreso o egreso en el panel lateral.</p>
+                            <h5 class="mt-3 text-muted">@T["Transactions.EmptyTitle"]</h5>
+                            <p class="text-muted small">@T["Transactions.EmptyText"]</p>
                         </div>
                     }
                     else
@@ -42,12 +42,12 @@
                             <table class="table table-hover table-striped mb-0 align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="py-3 ps-4">Fecha</th>
-                                        <th class="py-3">Cuenta</th>
-                                        <th class="py-3">Categoría</th>
-                                        <th class="py-3">Descripción</th>
-                                        <th class="py-3 text-center">Tipo</th>
-                                        <th class="py-3 text-end pe-4">Monto</th>
+                                        <th class="py-3 ps-4">@T["Home.Date"]</th>
+                                        <th class="py-3">@T["Home.Account"]</th>
+                                        <th class="py-3">@T["Home.Category"]</th>
+                                        <th class="py-3">@T["Transactions.Description"]</th>
+                                        <th class="py-3 text-center">@T["Transactions.Type"]</th>
+                                        <th class="py-3 text-end pe-4">@T["Transactions.Amount"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -61,11 +61,11 @@
                                             <td class="py-3 text-center">
                                                 @if (tx.Tipo == TipoTransaccion.Ingreso)
                                                 {
-                                                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i> Ingreso</span>
+                                                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i> @T["Transactions.Income"]</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="bi bi-arrow-down-left me-1"></i> Egreso</span>
+                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="bi bi-arrow-down-left me-1"></i> @T["Transactions.Expense"]</span>
                                                 }
                                             </td>
                                             <td class="py-3 text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "text-success" : "text-danger")">
@@ -86,7 +86,7 @@
             <!-- Form Nueva Transacción -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header card-header-accent py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i> Registrar Movimiento</h5>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i> @T["Transactions.RegisterMovement"]</h5>
                 </div>
                 <div class="card-body">
                     @if (!string.IsNullOrEmpty(errorMessage))
@@ -98,15 +98,15 @@
                     @if (successMessage)
                     {
                         <div class="alert alert-success" role="alert">
-                            <i class="bi bi-check-circle-fill me-2"></i> ¡Movimiento registrado!
+                            <i class="bi bi-check-circle-fill me-2"></i> @T["Transactions.Success"]
                         </div>
                     }
                     @if (cuentas is { Count: 0 })
                     {
                         <div class="alert alert-warning" role="alert">
                             <i class="bi bi-wallet2 me-2"></i>
-                            <span data-i18n="transactions.noAccount">Antes de registrar movimientos tenés que crear al menos una cuenta.</span>
-                            <a href="/cuentas" class="alert-link" data-i18n="transactions.createAccount">Crear cuenta</a>
+                            <span>@T["Transactions.NoAccount"]</span>
+                            <a href="/cuentas" class="alert-link">@T["Transactions.CreateAccount"]</a>
                         </div>
                     }
 
@@ -114,23 +114,23 @@
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold" data-i18n="transactions.type">Tipo de Movimiento</label>
+                            <label class="form-label fw-bold">@T["Transactions.MovementType"]</label>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-outline-success flex-fill py-2 @(nuevaTx.Tipo == TipoTransaccion.Ingreso ? "active fw-bold" : "")"
                                         @onclick="() => SetTipoTx(TipoTransaccion.Ingreso)">
-                                    <i class="bi bi-arrow-up-right me-1"></i> <span data-i18n="transactions.income">Ingreso</span>
+                                    <i class="bi bi-arrow-up-right me-1"></i> @T["Transactions.Income"]
                                 </button>
                                 <button type="button" class="btn btn-outline-danger flex-fill py-2 @(nuevaTx.Tipo == TipoTransaccion.Egreso ? "active fw-bold" : "")"
                                         @onclick="() => SetTipoTx(TipoTransaccion.Egreso)">
-                                    <i class="bi bi-arrow-down-left me-1"></i> <span data-i18n="transactions.expense">Egreso</span>
+                                    <i class="bi bi-arrow-down-left me-1"></i> @T["Transactions.Expense"]
                                 </button>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="cuenta" class="form-label fw-bold" data-i18n="transactions.account">Cuenta de Origen/Destino</label>
-                            <InputSelect id="cuenta" class="form-select" @bind-Value="nuevaTx.CuentaId" required disabled="@(cuentas is { Count: 0 })">
-                                <option value="">-- Seleccionar Cuenta --</option>
+                            <label for="cuenta" class="form-label fw-bold">@T["Transactions.Account"]</label>
+                            <InputSelect id="cuenta" class="@CuentaSelectCss" @bind-Value="nuevaTx.CuentaId" required disabled="@(cuentas is { Count: 0 })">
+                                <option value="">@T["Transactions.SelectAccount"]</option>
                                 @if (cuentas != null)
                                 {
                                     @foreach (var c in cuentas)
@@ -139,49 +139,62 @@
                                     }
                                 }
                             </InputSelect>
+                            @if (!string.IsNullOrEmpty(cuentaValidation))
+                            {
+                                <div class="invalid-feedback d-block">@cuentaValidation</div>
+                            }
                         </div>
 
                         <div class="mb-3">
-                            <label for="categoria" class="form-label fw-bold" data-i18n="transactions.category">Categoría</label>
-                            <InputSelect id="categoria" class="form-select" @bind-Value="nuevaTx.CategoriaId" required>
-                                <option value="">-- Seleccionar Categoría --</option>
-                                @if (categorias != null)
+                            <label for="categoria" class="form-label fw-bold">@T["Transactions.Category"]</label>
+                            <InputSelect id="categoria" class="@CategoriaSelectCss" @bind-Value="nuevaTx.CategoriaId" required disabled="@(!CategoriasParaTipo.Any())">
+                                <option value="">@T["Transactions.SelectCategory"]</option>
+                                @foreach (var cat in CategoriasParaTipo)
                                 {
-                                    @foreach (var cat in categorias.Where(c => c.Tipo == nuevaTx.Tipo))
-                                    {
-                                        <option value="@cat.Id">@cat.Nombre</option>
-                                    }
+                                    <option value="@cat.Id">@cat.Nombre</option>
                                 }
                             </InputSelect>
+                            @if (!CategoriasParaTipo.Any())
+                            {
+                                <div class="form-text text-warning">@T["Transactions.NoCategoryForType"]</div>
+                            }
+                            @if (!string.IsNullOrEmpty(categoriaValidation))
+                            {
+                                <div class="invalid-feedback d-block">@categoriaValidation</div>
+                            }
                         </div>
 
                         <div class="mb-3">
-                            <label for="monto" class="form-label fw-bold" data-i18n="transactions.amount">Monto</label>
+                            <label for="monto" class="form-label fw-bold">@T["Transactions.Amount"]</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
                                 <InputText id="monto"
-                                           class="form-control"
+                                           class="@MontoInputCss"
                                            @bind-Value="nuevaTx.MontoTexto"
                                            inputmode="decimal"
                                            autocomplete="off"
                                            placeholder="0,00"
                                            required />
                             </div>
-                            <div class="form-text text-muted" data-i18n="transactions.amountHint">Podés usar coma o punto decimal.</div>
+                            <div class="form-text text-muted">@T["Transactions.AmountHint"]</div>
+                            @if (!string.IsNullOrEmpty(montoValidation))
+                            {
+                                <div class="invalid-feedback d-block">@montoValidation</div>
+                            }
                         </div>
 
                         <div class="mb-3">
-                            <label for="descripcion" class="form-label fw-bold" data-i18n="transactions.description">Descripción</label>
-                            <InputText id="descripcion" class="form-control" placeholder="Ej: Supermercado, Alquiler, etc." @bind-Value="nuevaTx.Descripcion" />
+                            <label for="descripcion" class="form-label fw-bold">@T["Transactions.Description"]</label>
+                            <InputText id="descripcion" class="form-control" placeholder="@T["Transactions.DescriptionPlaceholder"]" @bind-Value="nuevaTx.Descripcion" />
                         </div>
 
                         <div class="mb-3">
-                            <label for="fecha" class="form-label fw-bold" data-i18n="transactions.date">Fecha</label>
+                            <label for="fecha" class="form-label fw-bold">@T["Transactions.Date"]</label>
                             <InputDate Type="InputDateType.DateTimeLocal" id="fecha" class="form-control" @bind-Value="nuevaTx.Fecha" required />
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" disabled="@(!cuentas?.Any() ?? true)">
-                            <i class="bi bi-save me-2"></i> <span data-i18n="transactions.save">Guardar Movimiento</span>
+                            <i class="bi bi-save me-2"></i> @T["Transactions.Save"]
                         </button>
                     </EditForm>
                 </div>
@@ -190,7 +203,7 @@
             <!-- Form Nueva Categoría Rápida -->
             <div class="card shadow-sm border-0">
                 <div class="card-header py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-tags me-2"></i> Crear Categoría</h5>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-tags me-2"></i> @T["Transactions.CreateCategory"]</h5>
                 </div>
                 <div class="card-body">
                     @if (!string.IsNullOrEmpty(catError))
@@ -202,7 +215,7 @@
                     @if (catSuccess)
                     {
                         <div class="alert alert-success py-2" role="alert">
-                            <small><i class="bi bi-check-circle-fill me-1"></i> Categoría creada</small>
+                            <small><i class="bi bi-check-circle-fill me-1"></i> @T["Transactions.CategoryCreated"]</small>
                         </div>
                     }
 
@@ -210,20 +223,20 @@
                         <DataAnnotationsValidator />
 
                         <div class="mb-2">
-                            <label for="catNombre" class="form-label fw-semibold">Nombre de Categoría</label>
-                            <InputText id="catNombre" class="form-control form-control-sm" placeholder="Ej: Servicios, Salidas" @bind-Value="nuevaCat.Nombre" required />
+                            <label for="catNombre" class="form-label fw-semibold">@T["Transactions.CategoryName"]</label>
+                            <InputText id="catNombre" class="form-control form-control-sm" placeholder="@T["Transactions.CategoryNamePlaceholder"]" @bind-Value="nuevaCat.Nombre" required />
                         </div>
 
                         <div class="mb-2">
-                            <label for="catTipo" class="form-label fw-semibold">Tipo de Categoría</label>
+                            <label for="catTipo" class="form-label fw-semibold">@T["Transactions.CategoryType"]</label>
                             <InputSelect id="catTipo" class="form-select form-select-sm" @bind-Value="nuevaCat.Tipo">
-                                <option value="@TipoTransaccion.Egreso">Egreso (Gasto)</option>
-                                <option value="@TipoTransaccion.Ingreso">Ingreso</option>
+                                <option value="@TipoTransaccion.Egreso">@T["Transactions.ExpenseOption"]</option>
+                                <option value="@TipoTransaccion.Ingreso">@T["Transactions.Income"]</option>
                             </InputSelect>
                         </div>
 
                         <button type="submit" class="btn btn-secondary btn-sm w-100 fw-bold">
-                            <i class="bi bi-plus-lg me-1"></i> Agregar Categoría
+                            <i class="bi bi-plus-lg me-1"></i> @T["Transactions.AddCategory"]
                         </button>
                     </EditForm>
                 </div>
@@ -240,12 +253,20 @@
     
     private string? errorMessage;
     private bool successMessage = false;
+    private string? cuentaValidation;
+    private string? categoriaValidation;
+    private string? montoValidation;
 
     private string? catError;
     private bool catSuccess = false;
 
     private TransaccionFormModel nuevaTx = new();
     private CategoriaFormModel nuevaCat = new();
+    private IEnumerable<Categoria> CategoriasParaTipo =>
+        categorias?.Where(c => c.Tipo == nuevaTx.Tipo) ?? Enumerable.Empty<Categoria>();
+    private string CuentaSelectCss => cuentaValidation is null ? "form-select" : "form-select is-invalid";
+    private string CategoriaSelectCss => categoriaValidation is null ? "form-select" : "form-select is-invalid";
+    private string MontoInputCss => montoValidation is null ? "form-control" : "form-control is-invalid";
 
     protected override async Task OnInitializedAsync()
     {
@@ -273,36 +294,51 @@
     {
         nuevaTx.Tipo = tipo;
         nuevaTx.CategoriaId = Guid.Empty; // Reset category selection when type changes
+        categoriaValidation = null;
     }
 
     private async Task HandleCreateTransaccion()
     {
         errorMessage = null;
         successMessage = false;
+        cuentaValidation = null;
+        categoriaValidation = null;
+        montoValidation = null;
 
         if (string.IsNullOrEmpty(userId)) return;
 
         if (cuentas is null || cuentas.Count == 0)
         {
-            errorMessage = "No podés registrar movimientos todavía: primero creá una cuenta.";
+            errorMessage = T["Transactions.ErrorNoAccount"];
+            cuentaValidation = T["Transactions.ValidationNoAccount"];
             return;
         }
 
         if (nuevaTx.CuentaId == Guid.Empty)
         {
-            errorMessage = "No seleccionaste cuenta. Elegí una cuenta para asociar el movimiento.";
+            errorMessage = T["Transactions.ErrorAccountRequired"];
+            cuentaValidation = T["Transactions.ValidationAccountRequired"];
+            return;
+        }
+
+        if (!CategoriasParaTipo.Any())
+        {
+            errorMessage = T["Transactions.ErrorNoCategory"];
+            categoriaValidation = T["Transactions.ValidationNoCategory"];
             return;
         }
 
         if (nuevaTx.CategoriaId == Guid.Empty)
         {
-            errorMessage = "Debe seleccionar una categoría.";
+            errorMessage = T["Transactions.ErrorCategoryRequired"];
+            categoriaValidation = T["Transactions.ValidationCategoryRequired"];
             return;
         }
 
         if (!TryParseMonto(nuevaTx.MontoTexto, out var monto) || monto <= 0)
         {
-            errorMessage = "El monto no es válido. Ingresá un número mayor a cero, por ejemplo 1500,50.";
+            errorMessage = T["Transactions.ErrorInvalidAmount"];
+            montoValidation = T["Transactions.ValidationInvalidAmount"];
             return;
         }
 
@@ -324,7 +360,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error al registrar movimiento: {ex.Message}";
+            errorMessage = string.Format(T["Transactions.ErrorCreate"], ex.Message);
         }
     }
 
@@ -337,7 +373,7 @@
 
         if (string.IsNullOrWhiteSpace(nuevaCat.Nombre))
         {
-            catError = "El nombre es requerido.";
+            catError = T["Transactions.CategoryNameRequired"];
             return;
         }
 
@@ -350,7 +386,7 @@
         }
         catch (Exception ex)
         {
-            catError = $"Error: {ex.Message}";
+            catError = string.Format(T["Transactions.CategoryError"], ex.Message);
         }
     }
 

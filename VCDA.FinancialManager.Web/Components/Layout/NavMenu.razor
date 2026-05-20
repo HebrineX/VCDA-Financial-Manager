@@ -1,68 +1,69 @@
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
+@inject UiText T
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand brand-lockup" href="">
+        <a class="navbar-brand brand-lockup shell-centered-blur" href="" data-enhance-nav="false">
             <img src="brand-mark.svg" alt="VCDA-Financial-Manager" class="brand-mark" />
             <span class="brand-copy">
-                <strong>VCDA</strong>
-                <span>Financial Manager</span>
+                <strong>@T["App.BrandShort"]</strong>
+                <span>@T["App.BrandProduct"]</span>
             </span>
         </a>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox" title="@T["Nav.Menu"]" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Inicio
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" data-enhance-nav="false">
+                <span class="@NavIcon("home")" aria-hidden="true"></span> <span>@T["Nav.Home"]</span>
             </NavLink>
         </div>
 
         <AuthorizeView>
             <Authorized Context="userContext">
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="cuentas">
-                        <span class="bi bi-wallet2-nav-menu" aria-hidden="true"></span> Mis Cuentas
+                    <NavLink class="nav-link" href="cuentas" data-enhance-nav="false">
+                        <span class="@NavIcon("accounts")" aria-hidden="true"></span> <span>@T["Nav.Accounts"]</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="transacciones">
-                        <span class="bi bi-list-columns-reverse-nav-menu" aria-hidden="true"></span> Transacciones
+                    <NavLink class="nav-link" href="transacciones" data-enhance-nav="false">
+                        <span class="@NavIcon("transactions")" aria-hidden="true"></span> <span>@T["Nav.Transactions"]</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="presupuestos">
-                        <span class="bi bi-piggy-bank-nav-menu" aria-hidden="true"></span> Presupuestos
+                    <NavLink class="nav-link" href="presupuestos" data-enhance-nav="false">
+                        <span class="@NavIcon("budgets")" aria-hidden="true"></span> <span>@T["Nav.Budgets"]</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="reportes">
-                        <span class="bi bi-bar-chart-nav-menu" aria-hidden="true"></span> Reportes
+                    <NavLink class="nav-link" href="reportes" data-enhance-nav="false">
+                        <span class="@NavIcon("reports")" aria-hidden="true"></span> <span>@T["Nav.Reports"]</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="importar">
-                        <span class="bi bi-upload-nav-menu" aria-hidden="true"></span> Importar CSV
+                    <NavLink class="nav-link" href="importar" data-enhance-nav="false">
+                        <span class="@NavIcon("import")" aria-hidden="true"></span> <span>@T["Nav.ImportCsv"]</span>
                     </NavLink>
                 </div>
                 <AuthorizeView Roles="Admin">
                     <Authorized>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="admin/usuarios">
-                                <span class="bi bi-shield-lock-nav-menu" aria-hidden="true"></span> Admin
+                            <NavLink class="nav-link" href="admin/usuarios" data-enhance-nav="false">
+                                <span class="@NavIcon("admin")" aria-hidden="true"></span> <span>@T["Nav.Admin"]</span>
                             </NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @userContext.User.Identity?.Name
+                    <NavLink class="nav-link" href="Account/Manage" data-enhance-nav="false">
+                        <span class="@NavIcon("profile")" aria-hidden="true"></span> @userContext.User.Identity?.Name
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
@@ -70,29 +71,46 @@
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
                         <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                            <span class="@NavIcon("logout")" aria-hidden="true"></span> <span>@T["Nav.Logout"]</span>
                         </button>
                     </form>
                 </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                    <NavLink class="nav-link" href="Account/Register" data-enhance-nav="false">
+                        <span class="@NavIcon("register")" aria-hidden="true"></span> <span>@T["Nav.Register"]</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                    <NavLink class="nav-link" href="Account/Login" data-enhance-nav="false">
+                        <span class="@NavIcon("login")" aria-hidden="true"></span> <span>@T["Nav.Login"]</span>
                     </NavLink>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
     </nav>
+
 </div>
 
 @code {
     private string? currentUrl;
+    private static readonly IReadOnlyDictionary<string, string> NavIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["home"] = "shell-icon shell-icon-home",
+        ["accounts"] = "shell-icon shell-icon-wallet",
+        ["transactions"] = "shell-icon shell-icon-transactions",
+        ["budgets"] = "shell-icon shell-icon-budget",
+        ["reports"] = "shell-icon shell-icon-reports",
+        ["import"] = "shell-icon shell-icon-import",
+        ["admin"] = "shell-icon shell-icon-admin",
+        ["profile"] = "shell-icon shell-icon-user",
+        ["logout"] = "shell-icon shell-icon-logout",
+        ["register"] = "shell-icon shell-icon-register",
+        ["login"] = "shell-icon shell-icon-login"
+    };
+
+    private static string NavIcon(string name) => NavIcons.TryGetValue(name, out var icon) ? icon : "shell-icon";
 
     protected override void OnInitialized()
     {

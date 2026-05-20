@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Globalization;
 using System.Net;
 using System.Threading.RateLimiting;
 using System.Text;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Security.Cryptography.X509Certificates;
@@ -22,7 +24,11 @@ var resetDatabaseOnStartup = builder.Configuration.GetValue("App:ResetDatabaseOn
 builder.Services.AddScoped<FinancialService>();
 builder.Services.AddScoped<AdminUserService>();
 builder.Services.AddScoped<PublicLinkService>();
+builder.Services.AddScoped<UiText>();
+builder.Services.AddSingleton<AppVersionProvider>();
 builder.Services.AddMemoryCache();
+builder.Services.AddLocalization();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddOptions<AdminSeedOptions>()
     .Bind(builder.Configuration.GetSection(AdminSeedOptions.SectionName))
     .Validate(options => !builder.Environment.IsProduction() || !options.Enabled || options.IsConfigured,
@@ -158,6 +164,13 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 var app = builder.Build();
+var supportedCultures = new[]
+{
+    new CultureInfo("es-AR"),
+    new CultureInfo("es"),
+    new CultureInfo("en-US"),
+    new CultureInfo("en")
+};
 
 using (var scope = app.Services.CreateScope())
 {
@@ -178,6 +191,12 @@ using (var scope = app.Services.CreateScope())
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("es-AR"),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+});
 app.Use(async (context, next) =>
 {
     context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
@@ -251,5 +270,39 @@ app.MapGet("/api/reportes/exportar-csv", async (
 }).RequireAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok", app = "VCDA-Financial-Manager" }));
+
+app.MapGet("/culture/set", (HttpContext context, string culture, string? returnUrl) =>
+{
+    var allowedCultures = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "es",
+        "es-AR",
+        "en",
+        "en-US"
+    };
+
+    if (!allowedCultures.Contains(culture))
+    {
+        culture = "es-AR";
+    }
+
+    context.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        new CookieOptions
+        {
+            HttpOnly = true,
+            IsEssential = true,
+            SameSite = SameSiteMode.Lax,
+            Secure = context.Request.IsHttps,
+            Expires = DateTimeOffset.UtcNow.AddYears(1)
+        });
+
+    var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) || !returnUrl.StartsWith("/", StringComparison.Ordinal)
+        ? "/"
+        : returnUrl;
+
+    return Results.LocalRedirect(safeReturnUrl);
+});
 
 app.Run();

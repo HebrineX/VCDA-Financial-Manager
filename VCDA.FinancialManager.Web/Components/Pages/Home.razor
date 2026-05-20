@@ -8,8 +8,9 @@
 @inject FinancialService FinancialService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject UiText T
 
-<PageTitle>Dashboard - VCDA-Financial-Manager</PageTitle>
+<PageTitle>@T["Home.Title"] - @T["App.BrandName"]</PageTitle>
 
 <AuthorizeView>
     <Authorized>
@@ -17,8 +18,8 @@
             <!-- Header Row -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 class="fw-bold m-0 text-gradient">¡Hola, @context.User.Identity?.Name!</h2>
-                    <p class="text-muted m-0">Aquí tienes el estado general de tus finanzas personales.</p>
+                    <h2 class="fw-bold m-0 text-gradient">@string.Format(T["Home.Hello"], context.User.Identity?.Name)</h2>
+                    <p class="text-muted m-0">@T["Home.Subtitle"]</p>
                 </div>
                 <div class="text-muted">
                     <span class="bi bi-calendar3 me-2"></span> @DateTime.Now.ToString("dd MMMM, yyyy")
@@ -30,7 +31,7 @@
             {
                 <div class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
+                        <span class="visually-hidden">@T["Common.Loading"]</span>
                     </div>
                 </div>
             }
@@ -44,7 +45,7 @@
                             <div class="card-body d-flex flex-column justify-content-between">
                                 <div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span class="text-muted fw-bold text-uppercase fs-7">Patrimonio Neto</span>
+                                        <span class="text-muted fw-bold text-uppercase fs-7">@T["Home.NetWorth"]</span>
                                         <span class="bi bi-wallet2 fs-4 text-primary"></span>
                                     </div>
                                     @if (patrimonioPorMoneda.Any())
@@ -60,8 +61,8 @@
                                     }
                                 </div>
                                 <div class="mt-3">
-                                    <span class="badge bg-success">Activo</span>
-                                    <small class="text-muted ms-2">Consolidado total</small>
+                                    <span class="badge bg-success">@T["Home.Active"]</span>
+                                    <small class="text-muted ms-2">@T["Home.TotalConsolidated"]</small>
                                 </div>
                             </div>
                         </div>
@@ -73,7 +74,7 @@
                             <div class="card-body d-flex flex-column justify-content-between">
                                 <div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span class="text-muted fw-bold text-uppercase fs-7">Ingresos (Mes)</span>
+                                        <span class="text-muted fw-bold text-uppercase fs-7">@T["Home.MonthlyIncome"]</span>
                                         <span class="bi bi-arrow-up-right-circle fs-4 text-success"></span>
                                     </div>
                                     @if (ingresosPorMoneda.Any())
@@ -89,7 +90,7 @@
                                     }
                                 </div>
                                 <div class="mt-3">
-                                    <span class="text-muted small">Mes actual: @DateTime.Now.ToString("MMMM")</span>
+                                    <span class="text-muted small">@string.Format(T["Home.CurrentMonth"], DateTime.Now.ToString("MMMM"))</span>
                                 </div>
                             </div>
                         </div>
@@ -101,7 +102,7 @@
                             <div class="card-body d-flex flex-column justify-content-between">
                                 <div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span class="text-muted fw-bold text-uppercase fs-7">Egresos (Mes)</span>
+                                        <span class="text-muted fw-bold text-uppercase fs-7">@T["Home.MonthlyExpense"]</span>
                                         <span class="bi bi-arrow-down-left-circle fs-4 text-danger"></span>
                                     </div>
                                     @if (egresosPorMoneda.Any())
@@ -117,7 +118,7 @@
                                     }
                                 </div>
                                 <div class="mt-3">
-                                    <span class="text-muted small">Mes actual: @DateTime.Now.ToString("MMMM")</span>
+                                    <span class="text-muted small">@string.Format(T["Home.CurrentMonth"], DateTime.Now.ToString("MMMM"))</span>
                                 </div>
                             </div>
                         </div>
@@ -128,7 +129,7 @@
                 {
                     <div class="card mb-4">
                         <div class="card-header fw-bold">
-                            <span class="bi bi-piggy-bank me-2"></span> Presupuestos del mes
+                            <span class="bi bi-piggy-bank me-2"></span> @T["Home.MonthBudgets"]
                         </div>
                         <div class="card-body d-flex flex-column gap-3">
                             @foreach (var budget in budgetProgress)
@@ -160,8 +161,8 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <span><span class="bi bi-graph-up-arrow me-2"></span> Tendencia financiera</span>
-                                <small class="text-muted">Ingresos, egresos y balance de 6 meses</small>
+                                <span><span class="bi bi-graph-up-arrow me-2"></span> @T["Home.FinancialTrend"]</span>
+                                <small class="text-muted">@T["Home.FinancialTrendHelp"]</small>
                             </div>
                             <div class="card-body">
                                 @if (monthlyHistory.Any())
@@ -186,7 +187,7 @@
                                         return $"{x:0.##},{y:0.##}";
                                     }));
 
-                                    <svg viewBox="0 0 720 280" class="w-100 report-trend-chart" role="img" aria-label="Gráfico de tendencia financiera">
+                                    <svg viewBox="0 0 720 280" class="w-100 report-trend-chart" role="img" aria-label="@T["Home.TrendChartLabel"]">
                                         <line x1="@paddingLeft" y1="@baselineY" x2="700" y2="@baselineY" class="chart-axis"></line>
                                         <line x1="@paddingLeft" y1="116" x2="700" y2="116" class="chart-midline"></line>
                                         @for (var i = 0; i < monthlyHistory.Count; i++)
@@ -208,14 +209,14 @@
                                     </svg>
 
                                     <div class="trend-legend mt-3">
-                                        <span><i class="legend-swatch legend-income"></i>Ingresos</span>
-                                        <span><i class="legend-swatch legend-expense"></i>Egresos</span>
-                                        <span><i class="legend-swatch legend-balance"></i>Balance</span>
+                                        <span><i class="legend-swatch legend-income"></i>@T["Home.Income"]</span>
+                                        <span><i class="legend-swatch legend-expense"></i>@T["Home.Expense"]</span>
+                                        <span><i class="legend-swatch legend-balance"></i>@T["Home.Balance"]</span>
                                     </div>
                                 }
                                 else
                                 {
-                                    <p class="text-muted m-0">Todavía no hay historial suficiente para construir la tendencia.</p>
+                                    <p class="text-muted m-0">@T["Home.NoTrend"]</p>
                                 }
                             </div>
                         </div>
@@ -225,8 +226,8 @@
                     <div class="col-lg-8">
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <span class="m-0"><span class="bi bi-clock-history me-2"></span> Movimientos Recientes</span>
-                                <a href="transacciones" class="btn btn-sm btn-outline-primary py-1 px-3">Cargar Transacción</a>
+                                <span class="m-0"><span class="bi bi-clock-history me-2"></span> @T["Home.RecentMovements"]</span>
+                                <a href="transacciones" class="btn btn-sm btn-outline-primary py-1 px-3">@T["Home.LoadTransaction"]</a>
                             </div>
                             <div class="card-body p-0">
                                 @if (recentTransactions.Any())
@@ -235,11 +236,11 @@
                                         <table class="table table-hover m-0">
                                             <thead>
                                                 <tr>
-                                                    <th>Fecha</th>
-                                                    <th>Cuenta</th>
-                                                    <th>Categoría</th>
-                                                    <th>Detalle</th>
-                                                    <th class="text-end">Monto</th>
+                                                    <th>@T["Home.Date"]</th>
+                                                    <th>@T["Home.Account"]</th>
+                                                    <th>@T["Home.Category"]</th>
+                                                    <th>@T["Home.Detail"]</th>
+                                                    <th class="text-end">@T["Home.Amount"]</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -267,8 +268,8 @@
                                 {
                                     <div class="text-center py-5">
                                         <span class="bi bi-cash-stack fs-1 text-muted d-block mb-3"></span>
-                                        <p class="text-muted m-0">No se registran movimientos.</p>
-                                        <a href="transacciones" class="btn btn-primary btn-sm mt-3">Comenzar a cargar</a>
+                                        <p class="text-muted m-0">@T["Home.NoMovements"]</p>
+                                        <a href="transacciones" class="btn btn-primary btn-sm mt-3">@T["Home.StartLoading"]</a>
                                     </div>
                                 }
                             </div>
@@ -279,7 +280,7 @@
                     <div class="col-lg-4">
                         <div class="card h-100">
                             <div class="card-header">
-                                <span><span class="bi bi-pie-chart-fill me-2"></span> Gastos por Categoría</span>
+                                <span><span class="bi bi-pie-chart-fill me-2"></span> @T["Home.ExpensesByCategory"]</span>
                             </div>
                             <div class="card-body">
                                 @if (expenseDistribution.Any())
@@ -303,7 +304,7 @@
                                 {
                                     <div class="text-center py-5">
                                         <span class="bi bi-pie-chart fs-1 text-muted d-block mb-3"></span>
-                                        <p class="text-muted m-0">Sin egresos registrados este mes.</p>
+                                        <p class="text-muted m-0">@T["Home.NoExpenses"]</p>
                                     </div>
                                 }
                             </div>
@@ -319,14 +320,14 @@
                 <div class="card-body p-4 p-lg-5">
                     <div class="row align-items-center g-4">
                         <div class="col-lg-6">
-                            <span class="vcda-kicker">VCDA-Financial-Manager</span>
-                            <h1 class="fw-bold display-4 text-gradient mb-3">Claridad visual para cada peso, dólar y decisión.</h1>
+                            <span class="vcda-kicker">@T["App.BrandName"]</span>
+                            <h1 class="fw-bold display-4 text-gradient mb-3">@T["Home.HeroTitle"]</h1>
                             <p class="text-muted fs-5 mb-4">
-                                Ordena cuentas, movimientos y presupuestos en una experiencia sobria, moderna y pensada para seguir tu balance sin ruido.
+                                @T["Home.HeroSubtitle"]
                             </p>
                             <div class="d-flex gap-3 flex-wrap">
-                                <a href="Account/Register" class="btn btn-primary btn-lg">Empezar Ahora</a>
-                                <a href="Account/Login" class="btn btn-outline-secondary btn-lg">Iniciar Sesión</a>
+                                <a href="Account/Register" class="btn btn-primary btn-lg">@T["Home.GetStarted"]</a>
+                                <a href="Account/Login" class="btn btn-outline-secondary btn-lg">@T["Home.SignIn"]</a>
                             </div>
                         </div>
                         <div class="col-lg-6">
@@ -364,8 +365,8 @@
                     <div class="card h-100 p-3">
                         <div class="card-body">
                             <span class="bi bi-wallet2 fs-2 text-primary d-block mb-3"></span>
-                            <h5 class="fw-bold mb-2">Múltiples Cuentas</h5>
-                            <p class="text-muted small m-0">Gestiona tus ahorros, billeteras virtuales y efectivo en distintas monedas.</p>
+                            <h5 class="fw-bold mb-2">@T["Home.CardAccounts"]</h5>
+                            <p class="text-muted small m-0">@T["Home.CardAccountsText"]</p>
                         </div>
                     </div>
                 </div>
@@ -373,8 +374,8 @@
                     <div class="card h-100 p-3">
                         <div class="card-body">
                             <span class="bi bi-lightning-charge fs-2 text-success d-block mb-3"></span>
-                            <h5 class="fw-bold mb-2">Movimientos Ágiles</h5>
-                            <p class="text-muted small m-0">Registra tus ingresos y egresos con un solo click y balanceo automático atómico.</p>
+                            <h5 class="fw-bold mb-2">@T["Home.CardMovements"]</h5>
+                            <p class="text-muted small m-0">@T["Home.CardMovementsText"]</p>
                         </div>
                     </div>
                 </div>
@@ -382,8 +383,8 @@
                     <div class="card h-100 p-3">
                         <div class="card-body">
                             <span class="bi bi-shield-check fs-2 text-info d-block mb-3"></span>
-                            <h5 class="fw-bold mb-2">Inmutabilidad Total</h5>
-                            <p class="text-muted small m-0">Tu historial está resguardado con estricta inmutabilidad a nivel de base de datos.</p>
+                            <h5 class="fw-bold mb-2">@T["Home.CardImmutable"]</h5>
+                            <p class="text-muted small m-0">@T["Home.CardImmutableText"]</p>
                         </div>
                     </div>
                 </div>

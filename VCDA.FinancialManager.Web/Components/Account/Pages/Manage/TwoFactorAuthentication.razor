@@ -8,24 +8,24 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Two-factor authentication (2FA)</PageTitle>
+<PageTitle>@T["Identity.TwoFactor.Title"]</PageTitle>
 
 <StatusMessage />
-<h3>Two-factor authentication (2FA)</h3>
+<h3>@T["Identity.TwoFactor.Title"]</h3>
 @if (!is2faEnabled)
 {
     if (isAdmin)
     {
         <div class="alert alert-warning" role="alert">
-            <strong>2FA obligatorio para Admin.</strong>
-            <p class="mb-0">Tu cuenta tiene permisos administrativos. Configura una app autenticadora para cumplir el requisito de seguridad antes de operar como Admin.</p>
+            <strong>@T["Identity.TwoFactor.AdminRequiredTitle"]</strong>
+            <p class="mb-0">@T["Identity.TwoFactor.AdminRequiredBody"]</p>
         </div>
     }
     else
     {
         <div class="alert alert-info" role="alert">
-            <strong>2FA recomendado.</strong>
-            <p class="mb-0">Activar una app autenticadora agrega una capa de proteccion opcional para tu cuenta.</p>
+            <strong>@T["Identity.TwoFactor.RecommendedTitle"]</strong>
+            <p class="mb-0">@T["Identity.TwoFactor.RecommendedBody"]</p>
         </div>
     }
 }
@@ -36,22 +36,22 @@
         if (recoveryCodesLeft == 0)
         {
             <div class="alert alert-danger">
-                <strong>You have no recovery codes left.</strong>
-                <p>You must <a href="Account/Manage/GenerateRecoveryCodes">generate a new set of recovery codes</a> before you can log in with a recovery code.</p>
+                <strong>@T["Identity.TwoFactor.NoCodesTitle"]</strong>
+                <p><a href="Account/Manage/GenerateRecoveryCodes">@T["Identity.TwoFactor.GenerateNewSet"]</a>. @T["Identity.TwoFactor.GenerateBeforeLogin"]</p>
             </div>
         }
         else if (recoveryCodesLeft == 1)
         {
             <div class="alert alert-danger">
-                <strong>You have 1 recovery code left.</strong>
-                <p>You can <a href="Account/Manage/GenerateRecoveryCodes">generate a new set of recovery codes</a>.</p>
+                <strong>@T["Identity.TwoFactor.OneCodeTitle"]</strong>
+                <p><a href="Account/Manage/GenerateRecoveryCodes">@T["Identity.TwoFactor.GenerateNewSet"]</a>.</p>
             </div>
         }
         else if (recoveryCodesLeft <= 3)
         {
             <div class="alert alert-warning">
-                <strong>You have @recoveryCodesLeft recovery codes left.</strong>
-                <p>You should <a href="Account/Manage/GenerateRecoveryCodes">generate a new set of recovery codes</a>.</p>
+                <strong>@(string.Format(T["Identity.TwoFactor.SomeCodesTitle"], recoveryCodesLeft))</strong>
+                <p>@T["Identity.TwoFactor.ShouldGenerate"] <a href="Account/Manage/GenerateRecoveryCodes">@T["Identity.TwoFactor.GenerateNewSet"]</a>.</p>
             </div>
         }
 
@@ -59,30 +59,30 @@
         {
             <form style="display: inline-block" @formname="forget-browser" @onsubmit="OnSubmitForgetBrowserAsync" method="post">
                 <AntiforgeryToken />
-                <button type="submit" class="btn btn-primary">Forget this browser</button>
+                <button type="submit" class="btn btn-primary">@T["Identity.TwoFactor.ForgetBrowser"]</button>
             </form>
         }
 
-        <a href="Account/Manage/Disable2fa" class="btn btn-primary">Disable 2FA</a>
-        <a href="Account/Manage/GenerateRecoveryCodes" class="btn btn-primary">Reset recovery codes</a>
+        <a href="Account/Manage/Disable2fa" class="btn btn-primary">@T["Identity.TwoFactor.Disable"]</a>
+        <a href="Account/Manage/GenerateRecoveryCodes" class="btn btn-primary">@T["Identity.TwoFactor.ResetCodes"]</a>
     }
 
-    <h4>Authenticator app</h4>
+    <h4>@T["Identity.TwoFactor.AuthenticatorApp"]</h4>
     @if (!hasAuthenticator)
     {
-        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">Add authenticator app</a>
+        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">@T["Identity.TwoFactor.AddAuthenticator"]</a>
     }
     else
     {
-        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">Set up authenticator app</a>
-        <a href="Account/Manage/ResetAuthenticator" class="btn btn-primary">Reset authenticator app</a>
+        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">@T["Identity.TwoFactor.SetupAuthenticator"]</a>
+        <a href="Account/Manage/ResetAuthenticator" class="btn btn-primary">@T["Identity.TwoFactor.ResetAuthenticator"]</a>
     }
 }
 else
 {
     <div class="alert alert-danger">
-        <strong>Privacy and cookie policy have not been accepted.</strong>
-        <p>You must accept the policy before you can enable two factor authentication.</p>
+        <strong>@T["Identity.TwoFactor.CookieTitle"]</strong>
+        <p>@T["Identity.TwoFactor.CookieBody"]</p>
     </div>
 }
 
@@ -119,7 +119,7 @@ else
         await SignInManager.ForgetTwoFactorClientAsync();
 
         RedirectManager.RedirectToCurrentPageWithStatus(
-            "The current browser has been forgotten. When you login again from this browser you will be prompted for your 2fa code.",
+            T["Identity.TwoFactor.BrowserForgotten"],
             HttpContext);
     }
 }

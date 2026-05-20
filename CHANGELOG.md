@@ -6,7 +6,24 @@ El formato sigue versiones semanticas: `MAJOR.MINOR.PATCH`.
 
 ## Unreleased
 
-- Planificado: Fase 7 como `2.2.0`.
+- Sin cambios pendientes versionados.
+
+## 2.2.0 - 2026-05-20
+
+- Fase 7 cerrada: UX/i18n, UI polish, onboarding e importador bancario sin MCP.
+- C-012 Fase 7: i18n ES/EN con cultura persistida por cookie y selector real de idioma.
+- C-012 Fase 7: header/sidebar migrados a textos renderizados por cultura para reducir mezcla de idiomas.
+- C-012 Fase 7: password eye aplicado a pantallas de login, registro, reset y cambios de contraseña.
+- C-012 Fase 7: Mi Cuenta permite editar nickname/username y reactivar o marcar vista la guía.
+- C-012 Fase 7: emails HTML VCDA sin logos externos, con CTA, fallback, nota de seguridad y expiración visible.
+- C-012 Fase 7: guía permanente normal/detallada disponible desde header y Mi Cuenta.
+- C-012 Fase 7 worker D: pulido visual de Admin, importador CSV y validaciones de movimientos.
+- Cierre QA: build OK, tests 5/5, deploy prod `2.2.0`, rutas críticas sin 503 ni overflow global.
+- Checklist QA visual no-regresión:
+- Admin: tabla legible en claro/oscuro, acciones alineadas y vista responsive tipo tarjeta en mobile.
+- Importar CSV: template descargable, precondición de cuenta/categoría visible, preview con filas válidas/errores y confirmación solo con filas válidas.
+- Transacciones: sin cuenta, sin categoría del tipo elegido y monto inválido muestran mensajes claros antes de guardar.
+- No tocar: `.hebrinex`, páginas Identity Account y datos financieros existentes al desactivar usuarios.
 
 ## 2.1.0 - 2026-05-19
 

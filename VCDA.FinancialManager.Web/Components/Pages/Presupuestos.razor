@@ -9,15 +9,15 @@
 @inject FinancialService FinancialService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Presupuestos</PageTitle>
+<PageTitle>@T["Budgets.Title"]</PageTitle>
 
 <div class="container-fluid py-4 animated-fade-in">
-    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-piggy-bank me-2"></span> Presupuestos Mensuales</h2>
+    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-piggy-bank me-2"></span> @T["Budgets.Monthly"]</h2>
 
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="card">
-                <div class="card-header fw-bold">Nuevo presupuesto</div>
+                <div class="card-header fw-bold">@T["Budgets.New"]</div>
                 <div class="card-body">
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
@@ -25,9 +25,9 @@
                     }
 
                     <div class="mb-3">
-                        <label class="form-label">Categoría (Egreso)</label>
+                        <label class="form-label">@T["Budgets.ExpenseCategory"]</label>
                         <select class="form-select" @bind="nuevo.CategoriaId">
-                            <option value="@Guid.Empty">Seleccionar...</option>
+                            <option value="@Guid.Empty">@T["Budgets.Select"]</option>
                             @foreach (var cat in categoriasEgreso)
                             {
                                 <option value="@cat.Id">@cat.Nombre</option>
@@ -36,26 +36,26 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-6">
-                            <label class="form-label">Mes</label>
+                            <label class="form-label">@T["Budgets.Month"]</label>
                             <InputNumber class="form-control" @bind-Value="nuevo.Mes" min="1" max="12" />
                         </div>
                         <div class="col-6">
-                            <label class="form-label">Año</label>
+                            <label class="form-label">@T["Budgets.Year"]</label>
                             <InputNumber class="form-control" @bind-Value="nuevo.Anio" />
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Límite</label>
+                        <label class="form-label">@T["Budgets.Limit"]</label>
                         <InputNumber class="form-control" @bind-Value="nuevo.Limite" />
                     </div>
-                    <button class="btn btn-primary w-100" @onclick="CrearPresupuesto">Guardar</button>
+                    <button class="btn btn-primary w-100" @onclick="CrearPresupuesto">@T["Common.Save"]</button>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-8">
             <div class="card">
-                <div class="card-header fw-bold">Presupuestos — @DateTime.Now.ToString("MMMM yyyy")</div>
+                <div class="card-header fw-bold">@string.Format(T["Budgets.Current"], DateTime.Now.ToString("MMMM yyyy"))</div>
                 <div class="card-body p-0">
                     @if (presupuestos is null)
                     {
@@ -63,7 +63,7 @@
                     }
                     else if (!presupuestos.Any())
                     {
-                        <p class="text-muted text-center py-4 m-0">No hay presupuestos definidos para este período.</p>
+                        <p class="text-muted text-center py-4 m-0">@T["Budgets.Empty"]</p>
                     }
                     else
                     {
@@ -71,9 +71,9 @@
                             <table class="table table-hover m-0">
                                 <thead>
                                     <tr>
-                                        <th class="ps-4">Categoría</th>
-                                        <th>Período</th>
-                                        <th class="text-end">Límite</th>
+                                        <th class="ps-4">@T["Home.Category"]</th>
+                                        <th>@T["Budgets.Period"]</th>
+                                        <th class="text-end">@T["Budgets.Limit"]</th>
                                         <th class="text-end pe-4"></th>
                                     </tr>
                                 </thead>
@@ -85,7 +85,7 @@
                                             <td>@p.Mes/@p.Anio</td>
                                             <td class="text-end">@p.Limite.ToString("C2")</td>
                                             <td class="text-end pe-4">
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(p.Id)">Eliminar</button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(p.Id)">@T["Common.Delete"]</button>
                                             </td>
                                         </tr>
                                     }

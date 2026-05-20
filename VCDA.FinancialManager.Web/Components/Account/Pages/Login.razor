@@ -13,12 +13,12 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Iniciar Sesión - VCDA-Financial-Manager</PageTitle>
+<PageTitle>@T["Identity.Login.Title"] - @T["Identity.BrandSuffix"]</PageTitle>
 
 <div class="container py-5 animated-fade-in d-flex justify-content-center align-items-center" style="min-height: 80vh;">
     <div class="card p-3 shadow-lg w-100" style="max-width: 480px; border-radius: 16px;">
         <div class="card-body">
-            <h2 class="fw-bold mb-4 text-center text-gradient">Iniciar Sesión</h2>
+            <h2 class="fw-bold mb-4 text-center text-gradient">@T["Identity.Login.Title"]</h2>
             <StatusMessage Message="@errorMessage" />
             
             <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
@@ -26,41 +26,46 @@
                 <ValidationSummary class="text-danger mb-3" role="alert" />
                 
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Identifier" id="Input.Identifier" class="form-control" autocomplete="username" aria-required="true" placeholder="email o usuario" />
-                    <label for="Input.Identifier" class="form-label">Email o usuario</label>
+                    <InputText @bind-Value="Input.Identifier" id="Input.Identifier" class="form-control" autocomplete="username" aria-required="true" placeholder="@T["Identity.Login.IdentifierPlaceholder"]" />
+                    <label for="Input.Identifier" class="form-label">@T["Identity.Login.Identifier"]</label>
                     <ValidationMessage For="() => Input.Identifier" class="text-danger" />
                 </div>
                 
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="contraseña" />
-                    <label for="Input.Password" class="form-label">Contraseña</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                <div class="password-field mb-3">
+                    <div class="form-floating">
+                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="@T["Identity.Login.PasswordPlaceholder"]" />
+                        <label for="Input.Password" class="form-label">@T["Identity.Password"]</label>
+                    </div>
+                    <button type="button" class="password-toggle" data-toggle-password="Input.Password" aria-label="@T["Identity.PasswordShow"]" data-show-label="@T["Identity.PasswordShow"]" data-hide-label="@T["Identity.PasswordHide"]">
+                        <span class="bi bi-eye"></span>
+                    </button>
                 </div>
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
                 
                 <div class="checkbox mb-3 d-flex justify-content-between align-items-center">
                     <label class="form-label m-0">
                         <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input me-2" />
-                        Recordarme
+                        <span>@T["Identity.Login.RememberMe"]</span>
                     </label>
-                    <a href="Account/ForgotPassword" class="small text-decoration-none">¿Olvidaste tu contraseña?</a>
+                    <a href="Account/ForgotPassword" class="small text-decoration-none">@T["Identity.Login.ForgotPassword"]</a>
                 </div>
                 
-                <button type="submit" class="w-100 btn btn-primary py-2 mb-3">Ingresar</button>
+                <button type="submit" class="w-100 btn btn-primary py-2 mb-3">@T["Identity.Login.Submit"]</button>
             </EditForm>
             
             @if (externalLogins.Length > 0)
             {
                 <hr />
                 <div class="text-center">
-                    <p class="text-muted small">O inicia sesión usando otros servicios</p>
+                    <p class="text-muted small">@T["Identity.Login.External"]</p>
                     <ExternalLoginPicker />
                 </div>
             }
             
             <hr />
             <div class="text-center mt-3">
-                <p class="text-muted small mb-1">¿No tienes una cuenta?</p>
-                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="fw-bold text-decoration-none">Registrarse</a>
+                <p class="text-muted small mb-1">@T["Identity.Login.NoAccount"]</p>
+                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="fw-bold text-decoration-none">@T["Identity.Login.Register"]</a>
             </div>
         </div>
     </div>
@@ -105,7 +110,7 @@
         var user = await FindUserAsync(Input.Identifier);
         if (user?.UserName is null)
         {
-            errorMessage = "Error: usuario/email o contrasena incorrectos.";
+            errorMessage = $"{T["Identity.ErrorPrefix"]}: {T["Identity.Login.Invalid"]}";
             return;
         }
 
@@ -129,7 +134,7 @@
         }
         else
         {
-            errorMessage = "Error: usuario/email o contrasena incorrectos.";
+            errorMessage = $"{T["Identity.ErrorPrefix"]}: {T["Identity.Login.Invalid"]}";
         }
     }
 
@@ -149,14 +154,14 @@
     private sealed class InputModel
     {
         [Required]
-        [Display(Name = "Email o usuario")]
+        [Display(Name = "Email or username")]
         public string Identifier { get; set; } = "";
 
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "Remember me")]
         public bool RememberMe { get; set; }
     }
 }

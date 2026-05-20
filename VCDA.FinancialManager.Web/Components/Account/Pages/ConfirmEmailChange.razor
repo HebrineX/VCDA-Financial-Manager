@@ -9,9 +9,9 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Confirm email change</PageTitle>
+<PageTitle>@T["Identity.ConfirmEmailChange.Title"]</PageTitle>
 
-<h1>Confirm email change</h1>
+<h1>@T["Identity.ConfirmEmailChange.Title"]</h1>
 
 <StatusMessage Message="@message" />
 
@@ -35,14 +35,14 @@
         if (UserId is null || Email is null || Code is null)
         {
             RedirectManager.RedirectToWithStatus(
-                "Account/Login", "Error: Invalid email change confirmation link.", HttpContext);
+                "Account/Login", $"{T["Identity.ErrorPrefix"]}: {T["Identity.ConfirmEmailChange.InvalidLink"]}", HttpContext);
             return;
         }
 
         var user = await UserManager.FindByIdAsync(UserId);
         if (user is null)
         {
-            message = "Unable to find user with Id '{userId}'";
+            message = T["Identity.ConfirmEmailChange.UserNotFound"];
             return;
         }
 
@@ -50,7 +50,7 @@
         var result = await UserManager.ChangeEmailAsync(user, Email, code);
         if (!result.Succeeded)
         {
-            message = "Error changing email.";
+            message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.ConfirmEmailChange.EmailError"]}";
             return;
         }
 
@@ -59,11 +59,11 @@
         var setUserNameResult = await UserManager.SetUserNameAsync(user, Email);
         if (!setUserNameResult.Succeeded)
         {
-            message = "Error changing user name.";
+            message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.ConfirmEmailChange.UserNameError"]}";
             return;
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        message = "Thank you for confirming your email change.";
+        message = T["Identity.ConfirmEmailChange.Success"];
     }
 }

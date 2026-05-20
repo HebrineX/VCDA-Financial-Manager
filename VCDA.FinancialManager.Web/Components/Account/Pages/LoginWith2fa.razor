@@ -9,12 +9,12 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<LoginWith2fa> Logger
 
-<PageTitle>Two-factor authentication</PageTitle>
+<PageTitle>@T["Identity.TwoFactor.Title"]</PageTitle>
 
-<h1>Two-factor authentication</h1>
+<h1>@T["Identity.TwoFactor.Title"]</h1>
 <hr />
 <StatusMessage Message="@message" />
-<p>Your login is protected with an authenticator app. Enter your authenticator code below.</p>
+<p>@T["Identity.TwoFactor.LoginIntro"]</p>
 <div class="row">
     <div class="col-md-4">
         <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
@@ -24,24 +24,24 @@
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="off" />
-                <label for="Input.TwoFactorCode" class="form-label">Authenticator code</label>
+                <label for="Input.TwoFactorCode" class="form-label">@T["Identity.TwoFactor.Code"]</label>
                 <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
             </div>
             <div class="checkbox mb-3">
                 <label for="remember-machine" class="form-label">
                     <InputCheckbox @bind-Value="Input.RememberMachine" />
-                    Remember this machine
+                    @T["Identity.TwoFactor.RememberMachine"]
                 </label>
             </div>
             <div>
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">@T["Identity.TwoFactor.LoginSubmit"]</button>
             </div>
         </EditForm>
     </div>
 </div>
 <p>
-    Don't have access to your authenticator device? You can
-    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
+    @T["Identity.TwoFactor.NoDevice"]
+    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">@T["Identity.TwoFactor.UseRecoveryCode"]</a>.
 </p>
 
 @code {
@@ -85,7 +85,7 @@
         else
         {
             Logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
-            message = "Error: Invalid authenticator code.";
+            message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.TwoFactor.InvalidCode"]}";
         }
     }
 

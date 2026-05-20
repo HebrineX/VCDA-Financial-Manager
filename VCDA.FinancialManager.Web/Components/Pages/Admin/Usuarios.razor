@@ -14,10 +14,20 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IJSRuntime JSRuntime
 
-<PageTitle>Administración de Usuarios</PageTitle>
+<PageTitle>@T["Admin.PageTitle"]</PageTitle>
 
-<div class="container-fluid py-4 animated-fade-in">
-    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-people-fill me-2"></span> Gestión de Usuarios</h2>
+<div class="container-fluid py-4 animated-fade-in admin-users-page">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 align-items-lg-end mb-4">
+        <div>
+            <span class="vcda-kicker mb-2">@T["Admin.Kicker"]</span>
+            <h2 class="fw-bold text-gradient mb-1"><span class="bi bi-people-fill me-2"></span> @T["Admin.UsersTitle"]</h2>
+            <p class="text-muted mb-0">@T["Admin.Subtitle"]</p>
+        </div>
+        <span class="badge admin-users-count align-self-start align-self-lg-auto">
+            <span class="bi bi-person-lines-fill me-1"></span>
+            @(users?.Count ?? 0) @T["Admin.Users"]
+        </span>
+    </div>
 
     @if (!string.IsNullOrEmpty(statusMessage))
     {
@@ -38,12 +48,9 @@
     @if (adminRequiresTwoFactor)
     {
         <div class="alert alert-warning shadow-sm" role="alert">
-            <h4 class="alert-heading">2FA obligatorio para administradores</h4>
-            <p>
-                Tu cuenta tiene permisos de administrador. Para operar el panel de usuarios,
-                primero configurá una app autenticadora desde la seguridad de tu cuenta.
-            </p>
-            <a class="btn btn-primary" href="Account/Manage/TwoFactorAuthentication">Configurar 2FA</a>
+            <h4 class="alert-heading">@T["Admin.TwoFactorRequiredTitle"]</h4>
+            <p>@T["Admin.TwoFactorRequiredBody"]</p>
+            <a class="btn btn-primary" href="Account/Manage/TwoFactorAuthentication">@T["Admin.Configure2FA"]</a>
         </div>
     }
     else if (users is null)
@@ -54,63 +61,68 @@
     }
     else
     {
-        <div class="card">
+        <div class="card admin-users-card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover m-0 align-middle">
+                    <table class="table table-hover m-0 align-middle admin-users-table">
                         <thead>
                             <tr>
-                                <th class="ps-4">Usuario</th>
-                                <th>Email</th>
-                                <th>Roles</th>
-                                <th>Email confirmado</th>
-                                <th>Estado</th>
-                                <th class="text-end pe-4">Acciones</th>
+                                <th class="ps-4">@T["Admin.User"]</th>
+                                <th>@T["Admin.Email"]</th>
+                                <th>@T["Admin.Roles"]</th>
+                                <th>@T["Admin.EmailConfirmed"]</th>
+                                <th>@T["Admin.Status"]</th>
+                                <th class="text-end pe-4">@T["Admin.Actions"]</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var user in users)
                             {
                                 <tr>
-                                    <td class="ps-4">@user.DisplayName</td>
-                                    <td>@user.Email</td>
-                                    <td>
+                                    <td class="ps-4" data-label="@T["Admin.User"]">
+                                        <div class="fw-bold">@user.DisplayName</div>
+                                        <div class="text-muted small d-lg-none">@user.Email</div>
+                                    </td>
+                                    <td data-label="@T["Admin.Email"]">@user.Email</td>
+                                    <td data-label="@T["Admin.Roles"]">
                                         @foreach (var role in user.Roles)
                                         {
-                                            <span class="badge @(role == "Admin" ? "bg-primary" : "bg-secondary") me-1">@role</span>
+                                            <span class="badge admin-role-badge @(role == "Admin" ? "admin-role-badge-primary" : "admin-role-badge-secondary") me-1">@role</span>
                                         }
                                     </td>
-                                    <td>
+                                    <td data-label="@T["Admin.EmailConfirmed"]">
                                         @if (user.EmailConfirmed)
                                         {
-                                            <span class="badge bg-success">Sí</span>
+                                            <span class="badge admin-status-badge admin-status-ok">@T["Common.Yes"]</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">No</span>
+                                            <span class="badge admin-status-badge admin-status-muted">@T["Common.No"]</span>
                                         }
                                     </td>
-                                    <td>
+                                    <td data-label="@T["Admin.Status"]">
                                         @if (user.IsDeactivated)
                                         {
-                                            <span class="badge bg-danger">Desactivado</span>
+                                            <span class="badge admin-status-badge admin-status-danger">@T["Admin.Deactivated"]</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-success">Activo</span>
+                                            <span class="badge admin-status-badge admin-status-ok">@T["Admin.Active"]</span>
                                         }
                                     </td>
-                                    <td class="text-end pe-4">
-                                        <div class="action-buttons">
+                                    <td class="text-end pe-4" data-label="@T["Admin.Actions"]">
+                                        <div class="action-buttons admin-action-buttons">
                                             <button class="btn btn-sm @(user.IsAdmin ? "btn-outline-primary" : "btn-primary")"
                                                     disabled="@user.IsDeactivated"
-                                                    title="@(user.IsAdmin ? "Quitar rol Admin" : "Asignar rol Admin")"
+                                                    title="@(user.IsAdmin ? T["Admin.RemoveAdminTitle"] : T["Admin.MakeAdminTitle"])"
                                                     @onclick="() => ToggleAdminRole(user.Id, !user.IsAdmin)">
-                                                @(user.IsAdmin ? "Quitar Admin" : "Hacer Admin")
+                                                <span class="bi @(user.IsAdmin ? "bi-shield-minus" : "bi-shield-plus") me-1"></span>
+                                                <span>@(user.IsAdmin ? T["Admin.RemoveAdmin"] : T["Admin.MakeAdmin"])</span>
                                             </button>
                                             <button class="btn btn-sm @(user.IsDeactivated ? "btn-success" : "btn-outline-danger")"
                                                     @onclick="() => SetUserDeactivation(user, !user.IsDeactivated)">
-                                                @(user.IsDeactivated ? "Reactivar" : "Desactivar")
+                                                <span class="bi @(user.IsDeactivated ? "bi-person-check" : "bi-person-slash") me-1"></span>
+                                                <span>@(user.IsDeactivated ? T["Admin.Reactivate"] : T["Admin.Deactivate"])</span>
                                             </button>
                                         </div>
                                     </td>
@@ -157,7 +169,7 @@
         {
             var confirmed = await JSRuntime.InvokeAsync<bool>(
                 "confirm",
-                $"¿Confirmas la desactivación de {user.DisplayName}? El usuario no podrá acceder, pero sus transacciones y datos se conservan.");
+                string.Format(T["Admin.ConfirmDeactivate"], user.DisplayName));
             if (!confirmed)
             {
                 return;
@@ -167,14 +179,14 @@
         var (success, error) = await AdminUserService.SetUserDeactivationAsync(user.Id, deactivate);
         if (!success)
         {
-            errorMessage = error ?? "No se pudo cambiar el estado del usuario.";
+            errorMessage = error ?? T["Admin.StateChangeError"];
             return;
         }
 
         users = await AdminUserService.GetUsersAsync();
         statusMessage = deactivate
-            ? "Usuario desactivado. Sus transacciones y datos se conservaron."
-            : "Usuario reactivado.";
+            ? T["Admin.StatusDeactivated"]
+            : T["Admin.StatusReactivated"];
     }
 
     private async Task ToggleAdminRole(string userId, bool makeAdmin)
@@ -190,7 +202,7 @@
 
         users = await AdminUserService.GetUsersAsync();
         statusMessage = makeAdmin
-            ? "Rol de administrador asignado."
-            : "Rol de administrador removido.";
+            ? T["Admin.StatusAdminAdded"]
+            : T["Admin.StatusAdminRemoved"];
     }
 }

@@ -14,7 +14,7 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EnableAuthenticator> Logger
 
-<PageTitle>Configurar app autenticadora</PageTitle>
+<PageTitle>@T["Identity.Authenticator.Title"]</PageTitle>
 
 @if (recoveryCodes is not null)
 {
@@ -23,44 +23,44 @@
 else
 {
     <StatusMessage Message="@message" />
-    <h3>Configurar app autenticadora</h3>
+    <h3>@T["Identity.Authenticator.Title"]</h3>
     <div>
-        <p>La verificacion en dos pasos protege tu cuenta aunque alguien obtenga tu contrasena.</p>
+        <p>@T["Identity.Authenticator.Intro"]</p>
         <ol class="list">
             <li>
                 <p>
-                    Instala una app autenticadora como Microsoft Authenticator para
-                    <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> and
-                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> o
-                    Google Authenticator para
-                    <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a> and
+                    @T["Identity.Authenticator.Install"]
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> /
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a>
+                    @T["Identity.Authenticator.Or"]
+                    <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a> /
                     <a href="https://itunes.apple.com/us/app/google-authenticator/id388497605?mt=8">iOS</a>.
                 </p>
             </li>
             <li>
-                <p>Escanea el codigo QR o ingresa esta clave manualmente: <kbd>@sharedKey</kbd>. Los espacios y mayusculas no importan.</p>
+                <p>@T["Identity.Authenticator.Scan"] <kbd>@sharedKey</kbd>. @T["Identity.Authenticator.ScanHint"]</p>
                 @if (qrCodeSvg is not null)
                 {
-                    <div class="border rounded bg-white d-inline-block p-3 mb-2" aria-label="Codigo QR para configurar la app autenticadora">
+                    <div class="border rounded bg-white d-inline-block p-3 mb-2" aria-label="@T["Identity.Authenticator.QrLabel"]">
                         @qrCodeSvg
                     </div>
                 }
-                <p class="text-muted small">Issuer: <strong>@AuthenticatorIssuer</strong></p>
+                <p class="text-muted small">@T["Identity.Authenticator.Issuer"]: <strong>@AuthenticatorIssuer</strong></p>
             </li>
             <li>
                 <p>
-                    Luego de escanear el QR o cargar la clave, tu app mostrara un codigo unico. Ingresalo abajo para confirmar.
+                    @T["Identity.Authenticator.Confirm"]
                 </p>
                 <div class="row">
                     <div class="col-xl-6">
                         <EditForm Model="Input" FormName="send-code" OnValidSubmit="OnValidSubmitAsync" method="post">
                             <DataAnnotationsValidator />
                             <div class="form-floating mb-3">
-                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" placeholder="Ingresa el codigo" />
-                                <label for="Input.Code" class="control-label form-label">Codigo de verificacion</label>
+                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" placeholder="@T["Identity.Authenticator.VerificationCode"]" />
+                                <label for="Input.Code" class="control-label form-label">@T["Identity.Authenticator.VerificationCode"]</label>
                                 <ValidationMessage For="() => Input.Code" class="text-danger" />
                             </div>
-                            <button type="submit" class="w-100 btn btn-lg btn-primary">Verificar</button>
+                            <button type="submit" class="w-100 btn btn-lg btn-primary">@T["Identity.Authenticator.Verify"]</button>
                             <ValidationSummary class="text-danger" role="alert" />
                         </EditForm>
                     </div>
@@ -117,7 +117,7 @@ else
 
         if (!is2faTokenValid)
         {
-            message = "Error: el codigo de verificacion no es valido.";
+            message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.Authenticator.Invalid"]}";
             return;
         }
 
@@ -125,7 +125,7 @@ else
         var userId = await UserManager.GetUserIdAsync(user);
         Logger.LogInformation("User with ID '{UserId}' has enabled 2FA with an authenticator app.", userId);
 
-        message = "Tu app autenticadora fue verificada.";
+        message = T["Identity.Authenticator.Verified"];
 
         if (await UserManager.CountRecoveryCodesAsync(user) == 0)
         {

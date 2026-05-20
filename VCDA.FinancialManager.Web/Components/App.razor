@@ -1,5 +1,10 @@
+@using System.Globalization
+@using System.Text.Json
+@inject UiText T
+@inject IHttpContextAccessor HttpContextAccessor
+
 <!DOCTYPE html>
-<html lang="es">
+<html lang="@CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-theme="@InitialTheme">
 
 <head>
     <meta charset="utf-8" />
@@ -16,344 +21,77 @@
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
     <script>
+        window.vcdaBehaviorText = @((MarkupString)JsonSerializer.Serialize(BehaviorText));
+
+        window.readVcdaStoredTheme = function () {
+            const cookieTheme = document.cookie
+                .split('; ')
+                .find(function (row) { return row.startsWith('vcda-theme='); })
+                ?.split('=')[1];
+
+            if (cookieTheme === 'dark' || cookieTheme === 'light') {
+                return cookieTheme;
+            }
+
+            try {
+                const localTheme = localStorage.getItem('theme');
+                return localTheme === 'dark' ? 'dark' : 'light';
+            } catch {
+                return 'light';
+            }
+        };
+
+        window.storeVcdaTheme = function (theme) {
+            document.cookie = 'vcda-theme=' + theme + ';path=/;max-age=31536000;samesite=lax';
+            try {
+                localStorage.setItem('theme', theme);
+            } catch {
+                // Cookie persistence is enough when storage is unavailable.
+            }
+        };
+
+        window.applyVcdaTheme = function (theme) {
+            const normalizedTheme = theme === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', normalizedTheme);
+            document.body?.setAttribute('data-theme', normalizedTheme);
+            return normalizedTheme;
+        };
+
         (function () {
-            const theme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+            window.applyVcdaTheme(window.readVcdaStoredTheme());
         })();
 
-        window.toggleApplicationTheme = function () {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'dark';
-            const next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            window.syncThemeButton();
-        };
-
-        window.syncThemeButton = function () {
-            const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-            const icon = document.getElementById('themeToggleIcon');
-            const text = document.getElementById('themeToggleText');
-            if (icon && text) {
-                if (theme === 'light') {
-                    icon.className = 'bi bi-moon-stars-fill text-info';
-                    text.dataset.i18n = 'theme.dark';
-                } else {
-                    icon.className = 'bi bi-sun-fill text-warning';
-                    text.dataset.i18n = 'theme.light';
-                }
-            }
-            window.applyVcdaLanguage?.();
-        };
-
-        document.addEventListener('DOMContentLoaded', window.syncThemeButton);
-
-        const vcdaTranslations = {
-            es: {
-                'common.close': 'Cerrar',
-                'theme.light': 'Modo Claro',
-                'theme.dark': 'Modo Oscuro',
-                'register.title': 'Registrarse',
-                'register.email': 'Correo Electrónico',
-                'register.password': 'Contraseña',
-                'register.confirmPassword': 'Confirmar Contraseña',
-                'register.passwordRules': 'Mínimo 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.',
-                'register.submit': 'Registrar Cuenta',
-                'register.external': 'O registrate usando otros servicios',
-                'register.haveAccount': '¿Ya tenés una cuenta?',
-                'register.login': 'Iniciar Sesión',
-                'register.clientHeader': 'Revisá estos puntos antes de registrar:',
-                'register.emailRequired': 'Ingresá un correo electrónico.',
-                'register.emailInvalid': 'Ingresá un correo electrónico válido.',
-                'register.passwordMin': 'La contraseña debe tener al menos 8 caracteres.',
-                'register.passwordLower': 'Agregá al menos una minúscula.',
-                'register.passwordUpper': 'Agregá al menos una mayúscula.',
-                'register.passwordDigit': 'Agregá al menos un número.',
-                'register.passwordSymbol': 'Agregá al menos un símbolo, por ejemplo !, # o $.',
-                'register.passwordMismatch': 'La contraseña y la confirmación no coinciden.',
-                'confirmEmail.title': 'Correo confirmado',
-                'confirmEmail.redirectPrefix': 'Te vamos a redirigir al inicio en',
-                'confirmEmail.redirectSuffix': 'segundos.',
-                'confirmEmail.goNow': 'Ir ahora',
-                'tutorial.kicker': 'Primer ingreso',
-                'tutorial.title': 'Configurar VCDA-Financial-Manager',
-                'tutorial.subtitle': 'Elegí el nivel de guía. Podés volver a abrir este tutorial desde el inicio.',
-                'tutorial.fast': 'Rápido',
-                'tutorial.detail': 'Detallado',
-                'tutorial.fast.step1': 'Creá una cuenta desde <strong>Mis Cuentas</strong>. Sin cuenta no se pueden cargar movimientos.',
-                'tutorial.fast.step2': 'Registrá ingresos o egresos desde <strong>Movimientos</strong>.',
-                'tutorial.fast.step3': 'Revisá gráficos y evolución en <strong>Reportes</strong>.',
-                'tutorial.fast.step4': 'Usá <strong>Importar CSV</strong> para cargar movimientos masivos.',
-                'tutorial.detail.step1': '<strong>Crear cuenta:</strong> cargá tu caja, banco, billetera o tarjeta. El saldo inicial define el punto de partida.',
-                'tutorial.detail.step2': '<strong>Categorías:</strong> usá las predeterminadas o creá categorías propias para ingresos y egresos.',
-                'tutorial.detail.step3': '<strong>Movimientos:</strong> cada movimiento requiere cuenta, categoría, monto, descripción y fecha.',
-                'tutorial.detail.step4': '<strong>Presupuestos:</strong> definí límites mensuales por categoría para controlar gastos.',
-                'tutorial.detail.step5': '<strong>Reportes:</strong> filtrá por fecha, cuenta o categoría y exportá CSV cuando lo necesites.',
-                'tutorial.detail.step6': '<strong>Importación:</strong> descargá el template, completalo con tus cuentas/categorías reales y previsualizá antes de confirmar.',
-                'tutorial.createAccount': 'Crear primera cuenta',
-                'tutorial.later': 'Lo hago después',
-                'tutorial.open': 'Guía',
-                'transactions.noAccount': 'Antes de registrar movimientos tenés que crear al menos una cuenta.',
-                'transactions.createAccount': 'Crear cuenta',
-                'transactions.type': 'Tipo de Movimiento',
-                'transactions.income': 'Ingreso',
-                'transactions.expense': 'Egreso',
-                'transactions.account': 'Cuenta de Origen/Destino',
-                'transactions.category': 'Categoría',
-                'transactions.amount': 'Monto',
-                'transactions.amountHint': 'Podés usar coma o punto decimal.',
-                'transactions.description': 'Descripción',
-                'transactions.date': 'Fecha',
-                'transactions.save': 'Guardar Movimiento'
-            },
-            en: {
-                'common.close': 'Close',
-                'theme.light': 'Light Mode',
-                'theme.dark': 'Dark Mode',
-                'register.title': 'Create Account',
-                'register.email': 'Email',
-                'register.password': 'Password',
-                'register.confirmPassword': 'Confirm Password',
-                'register.passwordRules': 'At least 8 characters, one uppercase letter, one lowercase letter, one number, and one symbol.',
-                'register.submit': 'Create Account',
-                'register.external': 'Or register with another service',
-                'register.haveAccount': 'Already have an account?',
-                'register.login': 'Sign In',
-                'register.clientHeader': 'Review these items before creating the account:',
-                'register.emailRequired': 'Enter an email address.',
-                'register.emailInvalid': 'Enter a valid email address.',
-                'register.passwordMin': 'Password must be at least 8 characters.',
-                'register.passwordLower': 'Add at least one lowercase letter.',
-                'register.passwordUpper': 'Add at least one uppercase letter.',
-                'register.passwordDigit': 'Add at least one number.',
-                'register.passwordSymbol': 'Add at least one symbol, for example !, #, or $.',
-                'register.passwordMismatch': 'Password and confirmation do not match.',
-                'confirmEmail.title': 'Email confirmed',
-                'confirmEmail.redirectPrefix': 'You will be redirected to the home page in',
-                'confirmEmail.redirectSuffix': 'seconds.',
-                'confirmEmail.goNow': 'Go now',
-                'tutorial.kicker': 'First login',
-                'tutorial.title': 'Set up VCDA-Financial-Manager',
-                'tutorial.subtitle': 'Choose your guide level. You can reopen this tutorial from the home page later.',
-                'tutorial.fast': 'Fast',
-                'tutorial.detail': 'Detailed',
-                'tutorial.fast.step1': 'Create an account from <strong>My Accounts</strong>. You cannot add movements without an account.',
-                'tutorial.fast.step2': 'Add income or expenses from <strong>Movements</strong>.',
-                'tutorial.fast.step3': 'Review charts and trends in <strong>Reports</strong>.',
-                'tutorial.fast.step4': 'Use <strong>Import CSV</strong> to load movements in bulk.',
-                'tutorial.detail.step1': '<strong>Create an account:</strong> add cash, bank, wallet, or card accounts. The initial balance defines your starting point.',
-                'tutorial.detail.step2': '<strong>Categories:</strong> use defaults or create your own income and expense categories.',
-                'tutorial.detail.step3': '<strong>Movements:</strong> each movement requires account, category, amount, description, and date.',
-                'tutorial.detail.step4': '<strong>Budgets:</strong> define monthly limits by category to control expenses.',
-                'tutorial.detail.step5': '<strong>Reports:</strong> filter by date, account, or category and export CSV when needed.',
-                'tutorial.detail.step6': '<strong>Import:</strong> download the template, fill it with your real accounts/categories, and preview before confirming.',
-                'tutorial.createAccount': 'Create first account',
-                'tutorial.later': 'Do it later',
-                'tutorial.open': 'Guide',
-                'transactions.noAccount': 'Before adding movements, you need to create at least one account.',
-                'transactions.createAccount': 'Create account',
-                'transactions.type': 'Movement Type',
-                'transactions.income': 'Income',
-                'transactions.expense': 'Expense',
-                'transactions.account': 'Source/Destination Account',
-                'transactions.category': 'Category',
-                'transactions.amount': 'Amount',
-                'transactions.amountHint': 'You can use comma or dot decimals.',
-                'transactions.description': 'Description',
-                'transactions.date': 'Date',
-                'transactions.save': 'Save Movement'
-            }
-        };
-
-        const vcdaPhraseTranslations = {
-            'Inicio': 'Home',
-            'Mis Cuentas': 'My Accounts',
-            'Transacciones': 'Transactions',
-            'Presupuestos': 'Budgets',
-            'Reportes': 'Reports',
-            'Importar CSV': 'Import CSV',
-            'Guía': 'Guide',
-            'Cerrar sesión': 'Sign out',
-            'Logout': 'Sign out',
-            'Register': 'Register',
-            'Login': 'Login',
-            'Control financiero claro, visual y multiusuario.': 'Clear, visual, multi-user financial control.',
-            'Aquí tienes el estado general de tus finanzas personales.': 'Here is the overall status of your personal finances.',
-            'Patrimonio Neto': 'Net Worth',
-            'Ingresos (Mes)': 'Income (Month)',
-            'Egresos (Mes)': 'Expenses (Month)',
-            'Consolidado total': 'Total consolidated',
-            'Mes actual:': 'Current month:',
-            'Movimientos Recientes': 'Recent Movements',
-            'No hay movimientos recientes': 'No recent movements',
-            'Distribución de Gastos': 'Expense Distribution',
-            'No hay gastos este mes': 'No expenses this month',
-            'Resumen de Presupuestos': 'Budget Summary',
-            'Sin presupuestos configurados': 'No budgets configured',
-            'Múltiples Cuentas': 'Multiple Accounts',
-            'Empezar Ahora': 'Get Started',
-            'Mis Cuentas Financieras': 'My Financial Accounts',
-            'Cargando...': 'Loading...',
-            'Cargando cuentas...': 'Loading accounts...',
-            'No tienes cuentas registradas': 'You do not have any accounts yet',
-            'Crea tu primera cuenta en el panel lateral para comenzar.': 'Create your first account in the side panel to begin.',
-            'Nombre de Cuenta': 'Account Name',
-            'Moneda': 'Currency',
-            'Saldo Actual': 'Current Balance',
-            'Nueva Cuenta': 'New Account',
-            '¡Cuenta creada con éxito!': 'Account created successfully!',
-            'Nombre de la Cuenta': 'Account Name',
-            'Saldo Inicial': 'Initial Balance',
-            'ARS (Peso Argentino)': 'ARS (Argentine Peso)',
-            'USD (Dólar Estadounidense)': 'USD (US Dollar)',
-            'EUR (Euro)': 'EUR (Euro)',
-            'Crear Cuenta': 'Create Account',
-            'Historial de Movimientos': 'Movement History',
-            'Cargando movimientos...': 'Loading movements...',
-            'No hay movimientos registrados': 'No movements registered',
-            'Registra tu primer ingreso o egreso en el panel lateral.': 'Add your first income or expense in the side panel.',
-            'Fecha': 'Date',
-            'Categoría': 'Category',
-            'Descripción': 'Description',
-            'Tipo': 'Type',
-            'Cuenta': 'Account',
-            'Registrar Movimiento': 'Add Movement',
-            '¡Movimiento registrado!': 'Movement saved!',
-            '-- Seleccionar Cuenta --': '-- Select Account --',
-            '-- Seleccionar Categoría --': '-- Select Category --',
-            'Ej: Supermercado, Alquiler, etc.': 'Example: Groceries, Rent, etc.',
-            'Crear Categoría': 'Create Category',
-            'Categoría creada': 'Category created',
-            'Nombre de Categoría': 'Category Name',
-            'Ej: Servicios, Salidas': 'Example: Utilities, Outings',
-            'Tipo de Categoría': 'Category Type',
-            'Egreso (Gasto)': 'Expense',
-            'Agregar Categoría': 'Add Category',
-            'Presupuestos Mensuales': 'Monthly Budgets',
-            'Nuevo presupuesto': 'New budget',
-            'Categoría (Egreso)': 'Category (Expense)',
-            'Seleccionar...': 'Select...',
-            'Mes': 'Month',
-            'Año': 'Year',
-            'Límite': 'Limit',
-            'Guardar': 'Save',
-            'No hay presupuestos definidos para este período.': 'No budgets defined for this period.',
-            'Período': 'Period',
-            'Eliminar': 'Delete',
-            'Exportar CSV': 'Export CSV',
-            'Desde': 'From',
-            'Hasta': 'To',
-            'Todas': 'All',
-            'Aplicar filtros': 'Apply filters',
-            'Balance mensual (últimos 6 meses)': 'Monthly balance (last 6 months)',
-            'Barras: ingresos/egresos. Línea: balance neto.': 'Bars: income/expenses. Line: net balance.',
-            'Ingresos': 'Income',
-            'Egresos': 'Expenses',
-            'Balance': 'Balance',
-            'Balance neto': 'Net balance',
-            'transacciones': 'transactions',
-            'Anterior': 'Previous',
-            'Siguiente': 'Next',
-            'Página': 'Page',
-            'Importación masiva CSV': 'Bulk CSV Import',
-            'Formato:': 'Format:',
-            'Descargar template de ejemplo': 'Download sample template',
-            'Editá los nombres de categoría y cuenta para que coincidan con los que ya cargaste.': 'Edit category and account names so they match the ones you already created.',
-            'Vista previa': 'Preview',
-            'válidas': 'valid',
-            'total': 'total',
-            'Estado': 'Status',
-            'Confirmar importación': 'Confirm import',
-            'filas': 'rows',
-            'Registrarse': 'Create Account',
-            'Correo Electrónico': 'Email',
-            'Contraseña': 'Password',
-            'Confirmar Contraseña': 'Confirm Password',
-            '¿Ya tenés una cuenta?': 'Already have an account?',
-            '¿Ya tienes una cuenta?': 'Already have an account?',
-            'Iniciar Sesión': 'Sign In',
-            'Correo confirmado': 'Email confirmed',
-            'Gracias. Tu correo fue confirmado correctamente.': 'Thank you. Your email was confirmed successfully.',
-            'No pudimos confirmar el correo. El enlace puede estar vencido o ya fue usado.': 'We could not confirm your email. The link may be expired or already used.',
-            'Email': 'Email',
-            'Password': 'Password',
-            'Remember me?': 'Remember me?',
-            'Forgot your password?': 'Forgot your password?',
-            'Resend email confirmation': 'Resend email confirmation',
-            'Use another service to log in.': 'Use another service to log in.'
-        };
-
-        const vcdaReversePhraseTranslations = Object.fromEntries(
-            Object.entries(vcdaPhraseTranslations).map(([es, en]) => [en, es])
-        );
-
         window.getVcdaLanguage = function () {
-            const saved = localStorage.getItem('vcdaLanguage');
-            if (saved === 'en' || saved === 'es') return saved;
-            return (navigator.language || '').toLowerCase().startsWith('en') ? 'en' : 'es';
+            const htmlLang = (document.documentElement.getAttribute('lang') || '').toLowerCase();
+            return htmlLang.startsWith('en') ? 'en' : 'es';
         };
 
         window.tVcda = function (key) {
-            const lang = window.getVcdaLanguage();
-            return vcdaTranslations[lang]?.[key] || vcdaTranslations.es[key] || key;
+            return window.vcdaBehaviorText?.[key] || key;
         };
 
-        window.applyVcdaLanguage = function () {
-            if (window.vcdaApplyingLanguage) return;
-            window.vcdaApplyingLanguage = true;
-            const lang = window.getVcdaLanguage();
-            document.documentElement.setAttribute('lang', lang);
-            document.querySelectorAll('[data-i18n]').forEach(function (el) {
-                el.textContent = window.tVcda(el.dataset.i18n);
-            });
-            document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
-                el.innerHTML = window.tVcda(el.dataset.i18nHtml);
-            });
-            const languageText = document.getElementById('languageToggleText');
-            if (languageText) languageText.textContent = lang.toUpperCase();
-            window.applyVcdaPhraseTranslations(lang);
-            window.vcdaApplyingLanguage = false;
-        };
+        window.syncThemeButton = function () {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            const icon = document.getElementById('themeToggleIcon');
+            const text = document.getElementById('themeToggleText');
+            const button = document.getElementById('themeToggleBtn');
 
-        window.toggleVcdaLanguage = function () {
-            const next = window.getVcdaLanguage() === 'es' ? 'en' : 'es';
-            localStorage.setItem('vcdaLanguage', next);
-            window.applyVcdaLanguage();
-        };
-
-        window.applyVcdaPhraseTranslations = function (lang) {
-            const map = lang === 'en' ? vcdaPhraseTranslations : vcdaReversePhraseTranslations;
-            const textWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-                acceptNode: function (node) {
-                    const parent = node.parentElement;
-                    if (!parent || parent.closest('script, style, code, pre, [data-no-i18n]')) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-                }
-            });
-
-            const textNodes = [];
-            while (textWalker.nextNode()) textNodes.push(textWalker.currentNode);
-            for (const node of textNodes) {
-                const original = node.nodeValue;
-                const leading = original.match(/^\s*/)?.[0] || '';
-                const trailing = original.match(/\s*$/)?.[0] || '';
-                const trimmed = original.trim();
-                if (map[trimmed]) {
-                    node.nodeValue = leading + map[trimmed] + trailing;
-                }
+            if (icon) {
+                icon.className = theme === 'dark' ? 'shell-icon shell-icon-moon' : 'shell-icon shell-icon-sun';
             }
 
-            document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(function (el) {
-                const value = el.getAttribute('placeholder');
-                if (value && map[value]) el.setAttribute('placeholder', map[value]);
-            });
+            if (text && button) {
+                text.textContent = theme === 'dark' ? button.dataset.darkLabel : button.dataset.lightLabel;
+            }
+        };
 
-            document.querySelectorAll('[title]').forEach(function (el) {
-                const value = el.getAttribute('title');
-                if (value && map[value]) el.setAttribute('title', map[value]);
-            });
+        window.toggleApplicationTheme = function () {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            window.applyVcdaTheme(next);
+            window.storeVcdaTheme(next);
+            window.syncThemeButton();
         };
 
         window.togglePasswordVisibility = function (button) {
@@ -378,19 +116,19 @@
             const errors = [];
             const emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
 
-            if (!email.trim()) errors.push(window.tVcda('register.emailRequired'));
-            else if (!emailRegex.test(email)) errors.push(window.tVcda('register.emailInvalid'));
-            if (password.length < 8) errors.push(window.tVcda('register.passwordMin'));
-            if (!/[a-z]/.test(password)) errors.push(window.tVcda('register.passwordLower'));
-            if (!/[A-Z]/.test(password)) errors.push(window.tVcda('register.passwordUpper'));
-            if (!/[0-9]/.test(password)) errors.push(window.tVcda('register.passwordDigit'));
-            if (!/[^a-zA-Z0-9]/.test(password)) errors.push(window.tVcda('register.passwordSymbol'));
-            if (password !== confirm) errors.push(window.tVcda('register.passwordMismatch'));
+            if (!email.trim()) errors.push(window.tVcda('Register.EmailRequired'));
+            else if (!emailRegex.test(email)) errors.push(window.tVcda('Register.EmailInvalid'));
+            if (password.length < 8) errors.push(window.tVcda('Register.PasswordMin'));
+            if (!/[a-z]/.test(password)) errors.push(window.tVcda('Register.PasswordLower'));
+            if (!/[A-Z]/.test(password)) errors.push(window.tVcda('Register.PasswordUpper'));
+            if (!/[0-9]/.test(password)) errors.push(window.tVcda('Register.PasswordDigit'));
+            if (!/[^a-zA-Z0-9]/.test(password)) errors.push(window.tVcda('Register.PasswordSymbol'));
+            if (password !== confirm) errors.push(window.tVcda('Register.PasswordMismatch'));
 
             const box = document.getElementById('registerClientErrors');
             if (errors.length > 0) {
                 if (box) {
-                    box.innerHTML = '<strong>' + window.tVcda('register.clientHeader') + '</strong><ul class="mb-0 mt-2"><li>' + errors.join('</li><li>') + '</li></ul>';
+                    box.innerHTML = '<strong>' + window.tVcda('Register.ClientHeader') + '</strong><ul class="mb-0 mt-2"><li>' + errors.join('</li><li>') + '</li></ul>';
                     box.classList.remove('d-none');
                 }
                 return false;
@@ -401,7 +139,7 @@
             if (submit) {
                 submit.disabled = true;
                 submit.dataset.originalText = submit.textContent;
-                submit.textContent = window.getVcdaLanguage() === 'en' ? 'Creating account...' : 'Creando cuenta...';
+                submit.textContent = window.tVcda('Register.Creating');
             }
             return true;
         };
@@ -431,28 +169,55 @@
             });
         };
 
+        window.getVcdaTutorialUserKey = function () {
+            const modal = document.getElementById('firstLoginTutorial');
+            const accountPanel = document.querySelector('[data-tutorial-account-user]');
+            return modal?.dataset.tutorialUser || accountPanel?.dataset.tutorialAccountUser || 'anonymous';
+        };
+
         window.closeVcdaTutorial = function () {
             const modal = document.getElementById('firstLoginTutorial');
-            const userKey = modal?.dataset.tutorialUser || 'anonymous';
+            const userKey = window.getVcdaTutorialUserKey();
             localStorage.setItem('vcdaTutorialSeen:' + userKey, 'true');
             modal?.classList.add('d-none');
         };
 
         window.openVcdaTutorial = function () {
-            const modal = document.getElementById('firstLoginTutorial');
-            if (!modal) return;
-            modal.classList.remove('d-none');
-            window.applyVcdaLanguage?.();
+            document.getElementById('firstLoginTutorial')?.classList.remove('d-none');
+        };
+
+        window.reactivateVcdaTutorial = function () {
+            const userKey = window.getVcdaTutorialUserKey();
+            localStorage.removeItem('vcdaTutorialSeen:' + userKey);
+            window.setVcdaTutorialAccountStatus?.('Tutorial.Account.StatusReady');
+        };
+
+        window.markVcdaTutorialSeen = function () {
+            const userKey = window.getVcdaTutorialUserKey();
+            localStorage.setItem('vcdaTutorialSeen:' + userKey, 'true');
+            window.setVcdaTutorialAccountStatus?.('Tutorial.Account.StatusSeen');
+        };
+
+        window.setVcdaTutorialAccountStatus = function (translationKey) {
+            const status = document.getElementById('tutorialAccountStatus');
+            if (!status) return;
+            status.textContent = window.tVcda(translationKey);
+            status.classList.remove('d-none');
         };
 
         window.showVcdaTutorialIfNeeded = function () {
             const modal = document.getElementById('firstLoginTutorial');
-            const userKey = modal?.dataset.tutorialUser || 'anonymous';
+            const userKey = window.getVcdaTutorialUserKey();
             if (!modal || localStorage.getItem('vcdaTutorialSeen:' + userKey) === 'true') return;
             modal.classList.remove('d-none');
         };
 
         document.addEventListener('click', function (event) {
+            if (event.target.closest('[data-theme-toggle]')) {
+                window.toggleApplicationTheme();
+                return;
+            }
+
             const button = event.target.closest('[data-toggle-password]');
             if (button) {
                 window.togglePasswordVisibility(button);
@@ -466,16 +231,14 @@
             }
         }, true);
 
-        document.addEventListener('DOMContentLoaded', window.applyVcdaLanguage);
+        window.syncVcdaThemeFromStorage = function () {
+            window.applyVcdaTheme(window.readVcdaStoredTheme());
+            window.syncThemeButton();
+        };
 
-        window.vcdaI18nObserver = new MutationObserver(function () {
-            window.clearTimeout(window.vcdaI18nTimer);
-            window.vcdaI18nTimer = window.setTimeout(window.applyVcdaLanguage, 50);
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
-            window.vcdaI18nObserver.observe(document.body, { childList: true, subtree: true });
-        });
+        document.addEventListener('DOMContentLoaded', window.syncVcdaThemeFromStorage);
+        document.addEventListener('enhancedload', window.syncVcdaThemeFromStorage);
+        window.addEventListener('pageshow', window.syncVcdaThemeFromStorage);
     </script>
 </head>
 
@@ -486,3 +249,30 @@
 </body>
 
 </html>
+
+@code {
+    private string InitialTheme
+    {
+        get
+        {
+            var theme = HttpContextAccessor.HttpContext?.Request.Cookies["vcda-theme"];
+            return string.Equals(theme, "dark", StringComparison.OrdinalIgnoreCase) ? "dark" : "light";
+        }
+    }
+
+    private Dictionary<string, string> BehaviorText => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Register.ClientHeader"] = T["Register.ClientHeader"],
+        ["Register.EmailRequired"] = T["Register.EmailRequired"],
+        ["Register.EmailInvalid"] = T["Register.EmailInvalid"],
+        ["Register.PasswordMin"] = T["Register.PasswordMin"],
+        ["Register.PasswordLower"] = T["Register.PasswordLower"],
+        ["Register.PasswordUpper"] = T["Register.PasswordUpper"],
+        ["Register.PasswordDigit"] = T["Register.PasswordDigit"],
+        ["Register.PasswordSymbol"] = T["Register.PasswordSymbol"],
+        ["Register.PasswordMismatch"] = T["Register.PasswordMismatch"],
+        ["Register.Creating"] = T["Register.Creating"],
+        ["Tutorial.Account.StatusReady"] = T["Tutorial.Account.StatusReady"],
+        ["Tutorial.Account.StatusSeen"] = T["Tutorial.Account.StatusSeen"]
+    };
+}

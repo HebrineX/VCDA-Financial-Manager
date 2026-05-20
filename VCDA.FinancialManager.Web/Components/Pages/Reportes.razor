@@ -11,13 +11,13 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
-<PageTitle>Reportes</PageTitle>
+<PageTitle>@T["Reports.Title"]</PageTitle>
 
 <div class="container-fluid py-4 animated-fade-in">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-gradient m-0"><span class="bi bi-bar-chart-line me-2"></span> Reportes</h2>
+        <h2 class="fw-bold text-gradient m-0"><span class="bi bi-bar-chart-line me-2"></span> @T["Reports.Title"]</h2>
         <a class="btn btn-outline-primary" href="@ExportUrl" target="_blank">
-            <span class="bi bi-download me-1"></span> Exportar CSV
+            <span class="bi bi-download me-1"></span> @T["Reports.ExportCsv"]
         </a>
     </div>
 
@@ -25,17 +25,17 @@
         <div class="card-body">
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label">Desde</label>
+                    <label class="form-label">@T["Reports.From"]</label>
                     <InputDate class="form-control" @bind-Value="filter.Desde" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Hasta</label>
+                    <label class="form-label">@T["Reports.To"]</label>
                     <InputDate class="form-control" @bind-Value="filter.Hasta" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Categoría</label>
+                    <label class="form-label">@T["Home.Category"]</label>
                     <select class="form-select" @bind="categoriaFilter">
-                        <option value="">Todas</option>
+                        <option value="">@T["Reports.All"]</option>
                         @foreach (var c in categorias)
                         {
                             <option value="@c.Id">@c.Nombre</option>
@@ -43,9 +43,9 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Cuenta</label>
+                    <label class="form-label">@T["Home.Account"]</label>
                     <select class="form-select" @bind="cuentaFilter">
-                        <option value="">Todas</option>
+                        <option value="">@T["Reports.All"]</option>
                         @foreach (var c in cuentas)
                         {
                             <option value="@c.Id">@c.Nombre</option>
@@ -53,7 +53,7 @@
                     </select>
                 </div>
                 <div class="col-12">
-                    <button class="btn btn-primary" @onclick="AplicarFiltros">Aplicar filtros</button>
+                    <button class="btn btn-primary" @onclick="AplicarFiltros">@T["Reports.ApplyFilters"]</button>
                 </div>
             </div>
         </div>
@@ -63,8 +63,8 @@
     {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span class="fw-bold">Balance mensual (últimos 6 meses)</span>
-                <small class="text-muted">Barras: ingresos/egresos. Línea: balance neto.</small>
+                <span class="fw-bold">@T["Reports.MonthlyBalance"]</span>
+                <small class="text-muted">@T["Reports.ChartHelp"]</small>
             </div>
             <div class="card-body">
                 @{
@@ -102,9 +102,9 @@
                     <polyline points="@balancePoints" class="chart-line-balance"></polyline>
                 </svg>
                 <div class="trend-legend mt-3">
-                    <span><i class="legend-swatch legend-income"></i>Ingresos</span>
-                    <span><i class="legend-swatch legend-expense"></i>Egresos</span>
-                    <span><i class="legend-swatch legend-balance"></i>Balance</span>
+                    <span><i class="legend-swatch legend-income"></i>@T["Home.Income"]</span>
+                    <span><i class="legend-swatch legend-expense"></i>@T["Home.Expense"]</span>
+                    <span><i class="legend-swatch legend-balance"></i>@T["Home.Balance"]</span>
                 </div>
             </div>
         </div>
@@ -115,19 +115,19 @@
         <div class="row g-3 mb-3">
             <div class="col-md-4">
                 <div class="card text-center p-3">
-                    <small class="text-muted">Ingresos</small>
+                    <small class="text-muted">@T["Home.Income"]</small>
                     <h4 class="text-success m-0">@report.TotalIngresos.ToString("C2")</h4>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card text-center p-3">
-                    <small class="text-muted">Egresos</small>
+                    <small class="text-muted">@T["Home.Expense"]</small>
                     <h4 class="text-danger m-0">@report.TotalEgresos.ToString("C2")</h4>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card text-center p-3">
-                    <small class="text-muted">Balance neto</small>
+                    <small class="text-muted">@T["Reports.NetBalance"]</small>
                     <h4 class="@(report.BalanceNeto >= 0 ? "text-success" : "text-danger") m-0">@report.BalanceNeto.ToString("C2")</h4>
                 </div>
             </div>
@@ -135,26 +135,26 @@
 
         <div class="card">
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover m-0">
+                <div class="table-responsive report-table-wrap">
+                    <table class="table table-hover m-0 report-table">
                         <thead>
                             <tr>
-                                <th class="ps-4">Fecha</th>
-                                <th>Cuenta</th>
-                                <th>Categoría</th>
-                                <th>Descripción</th>
-                                <th class="text-end pe-4">Monto</th>
+                                <th class="ps-4">@T["Home.Date"]</th>
+                                <th>@T["Home.Account"]</th>
+                                <th>@T["Home.Category"]</th>
+                                <th>@T["Transactions.Description"]</th>
+                                <th class="text-end pe-4">@T["Home.Amount"]</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var tx in report.Items)
                             {
                                 <tr>
-                                    <td class="ps-4">@tx.Fecha.ToString("dd/MM/yyyy")</td>
-                                    <td>@tx.Cuenta?.Nombre</td>
-                                    <td>@tx.Categoria?.Nombre</td>
-                                    <td>@tx.Descripcion</td>
-                                    <td class="text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "text-success" : "text-danger")">
+                                    <td class="ps-4" data-label="@T["Home.Date"]">@tx.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td data-label="@T["Home.Account"]">@tx.Cuenta?.Nombre</td>
+                                    <td data-label="@T["Home.Category"]">@tx.Categoria?.Nombre</td>
+                                    <td data-label="@T["Transactions.Description"]">@tx.Descripcion</td>
+                                    <td data-label="@T["Home.Amount"]" class="text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "text-success" : "text-danger")">
                                         @(tx.Tipo == TipoTransaccion.Ingreso ? "+" : "-")@tx.Monto.ToString("C2")
                                     </td>
                                 </tr>
@@ -163,12 +163,12 @@
                     </table>
                 </div>
             </div>
-            <div class="card-footer d-flex justify-content-between align-items-center">
-                <span class="text-muted small">@report.TotalCount transacciones</span>
+            <div class="card-footer report-card-footer d-flex justify-content-between align-items-center">
+                <span class="text-muted small">@report.TotalCount @T["Reports.Transactions"]</span>
                 <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-secondary" disabled="@(filter.Page <= 1)" @onclick="PaginaAnterior">Anterior</button>
-                    <span class="btn btn-sm btn-light disabled border">Página @filter.Page / @TotalPages</span>
-                    <button class="btn btn-sm btn-outline-secondary" disabled="@(filter.Page >= TotalPages)" @onclick="PaginaSiguiente">Siguiente</button>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(filter.Page <= 1)" @onclick="PaginaAnterior">@T["Reports.Previous"]</button>
+                    <span class="btn btn-sm btn-light disabled border">@string.Format(T["Reports.Page"], filter.Page, TotalPages)</span>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(filter.Page >= TotalPages)" @onclick="PaginaSiguiente">@T["Reports.Next"]</button>
                 </div>
             </div>
         </div>

@@ -8,13 +8,13 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Confirmación de registro</PageTitle>
+<PageTitle>@T["Identity.RegisterConfirmation.Title"]</PageTitle>
 
-<h1>Confirmación de registro</h1>
+<h1>@T["Identity.RegisterConfirmation.Title"]</h1>
 
 <StatusMessage Message="@statusMessage" />
 
-<p role="alert">Revisa tu email para confirmar la cuenta y activar el acceso.</p>
+<p role="alert">@T["Identity.RegisterConfirmation.Body"]</p>
 
 @code {
     private string? statusMessage;
@@ -40,7 +40,7 @@
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "No se encontró un usuario para el email indicado.";
+            statusMessage = T["Identity.RegisterConfirmation.NotFound"];
         }
     }
 }

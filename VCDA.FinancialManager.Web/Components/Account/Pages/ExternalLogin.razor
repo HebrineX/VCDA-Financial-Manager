@@ -18,17 +18,16 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ExternalLogin> Logger
 
-<PageTitle>Register</PageTitle>
+<PageTitle>@T["Identity.ExternalLogin.Title"]</PageTitle>
 
 <StatusMessage Message="@message" />
-<h1>Register</h1>
-<h2>Associate your @ProviderDisplayName account.</h2>
+<h1>@T["Identity.Register.Title"]</h1>
+<h2>@(string.Format(T["Identity.ExternalLogin.Associate"], ProviderDisplayName))</h2>
 <hr />
 
 <div  class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
+    @T["Identity.ExternalLogin.Authenticated"] <strong>@ProviderDisplayName</strong>.
+    @T["Identity.ExternalLogin.Instructions"]
 </div>
 
 <div class="row">
@@ -37,11 +36,11 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
-                <label for="Input.Email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" placeholder="@T["Identity.ExternalLogin.EmailPlaceholder"]" />
+                <label for="Input.Email" class="form-label">@T["Identity.Email"]</label>
                 <ValidationMessage For="() => Input.Email" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">@T["Identity.Register.Submit"]</button>
         </EditForm>
     </div>
 </div>
@@ -75,14 +74,14 @@
 
         if (RemoteError is not null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", $"{T["Identity.ErrorPrefix"]}: {T["Identity.ExternalLogin.ProviderError"]}: {RemoteError}", HttpContext);
             return;
         }
 
         var info = await SignInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", $"{T["Identity.ErrorPrefix"]}: {T["Identity.ExternalLogin.LoadError"]}", HttpContext);
             return;
         }
 
@@ -106,7 +105,7 @@
     {
         if (externalLoginInfo is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", $"{T["Identity.ErrorPrefix"]}: {T["Identity.ExternalLogin.LoadError"]}", HttpContext);
             return;
         }
 
@@ -143,7 +142,7 @@
     {
         if (externalLoginInfo is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information during confirmation.", HttpContext);
+            RedirectManager.RedirectToWithStatus("Account/Login", $"{T["Identity.ErrorPrefix"]}: {T["Identity.ExternalLogin.ConfirmationLoadError"]}", HttpContext);
             return;
         }
 
@@ -184,7 +183,7 @@
         }
         else
         {
-            message = $"Error: {string.Join(",", result.Errors.Select(error => error.Description))}";
+            message = $"{T["Identity.ErrorPrefix"]}: {string.Join(",", result.Errors.Select(error => error.Description))}";
         }
     }
 

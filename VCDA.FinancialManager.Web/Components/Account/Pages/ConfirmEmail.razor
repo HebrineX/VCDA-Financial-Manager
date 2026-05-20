@@ -8,17 +8,17 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Correo confirmado - VCDA-Financial-Manager</PageTitle>
+<PageTitle>@T["Identity.ConfirmEmail.Title"] - @T["Identity.BrandSuffix"]</PageTitle>
 
-<h1 data-i18n="confirmEmail.title">Correo confirmado</h1>
+<h1>@T["Identity.ConfirmEmail.Title"]</h1>
 <StatusMessage Message="@statusMessage" />
 @if (isConfirmed)
 {
     <div class="alert alert-info mt-3" role="status">
-        <span data-i18n="confirmEmail.redirectPrefix">Te vamos a redirigir al inicio en</span>
+        <span>@T["Identity.ConfirmEmail.RedirectPrefix"]</span>
         <strong id="confirmEmailCountdown">5</strong>
-        <span data-i18n="confirmEmail.redirectSuffix">segundos.</span>
-        <a href="/" class="alert-link ms-1" data-i18n="confirmEmail.goNow">Ir ahora</a>
+        <span>@T["Identity.ConfirmEmail.RedirectSuffix"]</span>
+        <a href="/" class="alert-link ms-1">@T["Identity.ConfirmEmail.GoNow"]</a>
     </div>
     <script>
         window.startConfirmEmailRedirect?.();
@@ -58,8 +58,8 @@
             var result = await UserManager.ConfirmEmailAsync(user, code);
             isConfirmed = result.Succeeded;
             statusMessage = result.Succeeded
-                ? "Gracias. Tu correo fue confirmado correctamente."
-                : "No pudimos confirmar el correo. El enlace puede estar vencido o ya fue usado.";
+                ? T["Identity.ConfirmEmail.Success"]
+                : T["Identity.ConfirmEmail.Failure"];
         }
     }
 }

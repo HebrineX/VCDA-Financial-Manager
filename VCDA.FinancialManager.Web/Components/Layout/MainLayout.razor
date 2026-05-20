@@ -6,6 +6,9 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject UiText T
+@inject AppVersionProvider AppVersion
 
 <div class="page">
     <div class="sidebar">
@@ -14,41 +17,49 @@
 
     <main>
         <div class="top-row px-4 justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
+            <div class="topbar-brand shell-centered-blur d-flex align-items-center gap-3">
                 <img src="brand-mark.svg" alt="VCDA-Financial-Manager" class="topbar-brand-mark" />
                 <div class="brand-title-block">
-                    <span class="fs-5 fw-bold text-primary text-gradient d-block">VCDA-Financial-Manager</span>
-                    <span class="brand-subtitle">Control financiero claro, visual y multiusuario.</span>
+                    <span class="fs-5 fw-bold text-primary text-gradient d-block">@T["App.BrandName"]</span>
+                    <span class="brand-subtitle">@T["App.Tagline"]</span>
                 </div>
             </div>
-            <div class="d-flex align-items-center gap-3">
+            <div class="topbar-actions d-flex align-items-center gap-3">
                 <AuthorizeView>
                     <Authorized Context="authContext">
-                        <span class="text-muted small d-none d-md-inline">
-                            <span class="bi bi-person-circle me-1"></span>
+                        <span class="topbar-user text-muted small d-none d-md-inline" aria-label="@T["App.UserMenu"]">
+                            <span class="shell-icon shell-icon-user" aria-hidden="true"></span>
                             @GetHeaderUserName(authContext.User)
                         </span>
                         <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2"
                                 type="button"
                                 onclick="window.openVcdaTutorial()">
-                            <span class="bi bi-info-circle" aria-hidden="true"></span>
-                            <span data-i18n="tutorial.open">Guía</span>
+                            <span class="shell-icon shell-icon-guide" aria-hidden="true"></span>
+                            <span>@T["Guide.Open"]</span>
                         </button>
                     </Authorized>
                 </AuthorizeView>
                 <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 theme-toggle-btn" 
                         id="themeToggleBtn"
-                        onclick="toggleApplicationTheme()">
-                    <span id="themeToggleIcon" class="bi bi-sun-fill text-warning" aria-hidden="true" style="font-size: 1.1rem;"></span>
-                    <span id="themeToggleText" data-i18n="theme.light">Modo Claro</span>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary language-toggle-btn"
                         type="button"
-                        onclick="window.toggleVcdaLanguage()"
-                        aria-label="Cambiar idioma">
-                    <span class="bi bi-translate me-1"></span>
-                    <span id="languageToggleText">ES</span>
+                        data-light-label="@T["Theme.Light"]"
+                        data-dark-label="@T["Theme.Dark"]"
+                        aria-label="@T["Theme.Toggle"]"
+                        data-theme-toggle="true">
+                    <span id="themeToggleIcon" class="shell-icon shell-icon-sun" aria-hidden="true"></span>
+                    <span id="themeToggleText">@T["Theme.Light"]</span>
                 </button>
+                <a class="btn btn-sm btn-outline-secondary language-toggle-btn"
+                        href="@CultureToggleUrl"
+                        data-enhance-nav="false"
+                        aria-label="@T["Language.Toggle"]"
+                        title="@T["Language.Toggle"]">
+                    <span class="shell-icon shell-icon-language" aria-hidden="true"></span>
+                    <span id="languageToggleText">@T.CurrentLanguageLabel</span>
+                </a>
+                <span class="app-version-pill d-none d-lg-inline-flex">
+                    @T["App.Version"] @AppVersion.Version
+                </span>
             </div>
         </div>
 
@@ -69,41 +80,41 @@
             <div class="vcda-tutorial-card">
                 <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                     <div>
-                        <span class="vcda-kicker mb-2" data-i18n="tutorial.kicker">Primer ingreso</span>
-                        <h2 id="tutorialTitle" class="fw-bold mb-1" data-i18n="tutorial.title">Configurar VCDA-Financial-Manager</h2>
-                        <p class="text-muted mb-0" data-i18n="tutorial.subtitle">Elegí el nivel de guía. Podés volver a abrir este tutorial desde el inicio.</p>
+                        <span class="vcda-kicker mb-2">@T["Guide.Kicker"]</span>
+                        <h2 id="tutorialTitle" class="fw-bold mb-1">@T["Guide.Title"]</h2>
+                        <p class="text-muted mb-0">@T["Guide.Subtitle"]</p>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.closeVcdaTutorial()" data-i18n="common.close">Cerrar</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.closeVcdaTutorial()">@T["Common.Close"]</button>
                 </div>
 
                 <div class="btn-group w-100 mb-3" role="group" aria-label="Modo de tutorial">
-                    <button type="button" class="btn btn-outline-primary active" data-tutorial-mode="fast" onclick="window.setVcdaTutorialMode('fast')" data-i18n="tutorial.fast">Rápido</button>
-                    <button type="button" class="btn btn-outline-primary" data-tutorial-mode="detail" onclick="window.setVcdaTutorialMode('detail')" data-i18n="tutorial.detail">Detallado</button>
+                    <button type="button" class="btn btn-outline-primary active" data-tutorial-mode="fast" onclick="window.setVcdaTutorialMode('fast')">@T["Guide.Normal"]</button>
+                    <button type="button" class="btn btn-outline-primary" data-tutorial-mode="detail" onclick="window.setVcdaTutorialMode('detail')">@T["Guide.Detail"]</button>
                 </div>
 
                 <div data-tutorial-panel="fast">
                     <ol class="vcda-tutorial-steps">
-                        <li data-i18n-html="tutorial.fast.step1">Creá una cuenta desde <strong>Mis Cuentas</strong>. Sin cuenta no se pueden cargar movimientos.</li>
-                        <li data-i18n-html="tutorial.fast.step2">Registrá ingresos o egresos desde <strong>Movimientos</strong>.</li>
-                        <li data-i18n-html="tutorial.fast.step3">Revisá gráficos y evolución en <strong>Reportes</strong>.</li>
-                        <li data-i18n-html="tutorial.fast.step4">Usá <strong>Importar CSV</strong> para cargar movimientos masivos.</li>
+                        <li>@((MarkupString)T["Guide.Normal.1"])</li>
+                        <li>@((MarkupString)T["Guide.Normal.2"])</li>
+                        <li>@((MarkupString)T["Guide.Normal.3"])</li>
+                        <li>@((MarkupString)T["Guide.Normal.4"])</li>
                     </ol>
                 </div>
 
                 <div data-tutorial-panel="detail" class="d-none">
                     <ol class="vcda-tutorial-steps">
-                        <li data-i18n-html="tutorial.detail.step1"><strong>Crear cuenta:</strong> cargá tu caja, banco, billetera o tarjeta. El saldo inicial define el punto de partida.</li>
-                        <li data-i18n-html="tutorial.detail.step2"><strong>Categorías:</strong> usá las predeterminadas o creá categorías propias para ingresos y egresos.</li>
-                        <li data-i18n-html="tutorial.detail.step3"><strong>Movimientos:</strong> cada movimiento requiere cuenta, categoría, monto, descripción y fecha.</li>
-                        <li data-i18n-html="tutorial.detail.step4"><strong>Presupuestos:</strong> definí límites mensuales por categoría para controlar gastos.</li>
-                        <li data-i18n-html="tutorial.detail.step5"><strong>Reportes:</strong> filtrá por fecha, cuenta o categoría y exportá CSV cuando lo necesites.</li>
-                        <li data-i18n-html="tutorial.detail.step6"><strong>Importación:</strong> descargá el template, completalo con tus cuentas/categorías reales y previsualizá antes de confirmar.</li>
+                        <li>@((MarkupString)T["Guide.Detail.1"])</li>
+                        <li>@((MarkupString)T["Guide.Detail.2"])</li>
+                        <li>@((MarkupString)T["Guide.Detail.3"])</li>
+                        <li>@((MarkupString)T["Guide.Detail.4"])</li>
+                        <li>@((MarkupString)T["Guide.Detail.5"])</li>
+                        <li>@((MarkupString)T["Guide.Detail.6"])</li>
                     </ol>
                 </div>
 
                 <div class="d-flex flex-column flex-sm-row gap-2 mt-4">
-                    <a href="/cuentas" class="btn btn-primary flex-fill" onclick="window.closeVcdaTutorial()" data-i18n="tutorial.createAccount">Crear primera cuenta</a>
-                    <button type="button" class="btn btn-outline-secondary flex-fill" onclick="window.closeVcdaTutorial()" data-i18n="tutorial.later">Lo hago después</button>
+                    <a href="/cuentas" class="btn btn-primary flex-fill" onclick="window.closeVcdaTutorial()">@T["Guide.CreateFirstAccount"]</a>
+                    <button type="button" class="btn btn-outline-secondary flex-fill" onclick="window.closeVcdaTutorial()">@T["Guide.Seen"]</button>
                 </div>
             </div>
         </div>
@@ -111,13 +122,14 @@
 </AuthorizeView>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    @T["Shell.Error"]
+    <a href="." class="reload">@T["Shell.Reload"]</a>
+    <span class="dismiss">x</span>
 </div>
 
 @code {
     private string? headerNickname;
+    private string CultureToggleUrl => $"/culture/set?culture={Uri.EscapeDataString(T.NextCulture)}&returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri) is { Length: > 0 } relative ? "/" + relative : "/")}";
 
     protected override async Task OnInitializedAsync()
     {

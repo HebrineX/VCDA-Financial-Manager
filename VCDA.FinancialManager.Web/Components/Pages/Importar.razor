@@ -10,27 +10,75 @@
 @inject FinancialService FinancialService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Importar CSV</PageTitle>
+<PageTitle>@T["Import.Title"]</PageTitle>
 
-<div class="container-fluid py-4 animated-fade-in">
-    <h2 class="fw-bold text-gradient mb-4"><span class="bi bi-upload me-2"></span> Importación masiva CSV</h2>
+<div class="container-fluid py-4 animated-fade-in import-csv-page">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-end mb-4">
+        <div>
+            <span class="vcda-kicker mb-2">@T["Import.Kicker"]</span>
+            <h2 class="fw-bold text-gradient mb-1"><span class="bi bi-upload me-2"></span> @T["Import.Title"]</h2>
+            <p class="text-muted mb-0">@T["Import.Subtitle"]</p>
+        </div>
+        <a class="btn btn-outline-primary"
+           href="/templates/importacion-transacciones-ejemplo.csv"
+           download="importacion-transacciones-ejemplo.csv">
+            <span class="bi bi-download me-1"></span> @T["Import.DownloadTemplate"]
+        </a>
+    </div>
 
-    <div class="card mb-4">
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="import-csv-stat">
+                <span class="bi bi-wallet2"></span>
+                <div>
+                    <div class="fw-bold">@cuentas.Count @T["Import.Accounts"]</div>
+                    <small class="text-muted">@T["Import.AccountsHelp"]</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="import-csv-stat">
+                <span class="bi bi-tags"></span>
+                <div>
+                    <div class="fw-bold">@categorias.Count @T["Import.Categories"]</div>
+                    <small class="text-muted">@T["Import.CategoriesHelp"]</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="import-csv-stat">
+                <span class="bi bi-filetype-csv"></span>
+                <div>
+                    <div class="fw-bold">@T["Import.MaxSize"]</div>
+                    <small class="text-muted">@T["Import.DecimalHelp"]</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 import-csv-card">
         <div class="card-body">
             <p class="text-muted small mb-3">
-                Formato: <code>Fecha (YYYY-MM-DD), Descripcion, Monto, Tipo (Ingreso/Egreso), Categoria, Cuenta</code>
+                <span>@T["Import.Format"]</span>
+                <code>@T["Import.FormatColumns"]</code>
             </p>
-            <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center mb-3">
-                <a class="btn btn-outline-primary btn-sm"
-                   href="/templates/importacion-transacciones-ejemplo.csv"
-                   download="importacion-transacciones-ejemplo.csv">
-                    <span class="bi bi-download me-1"></span> Descargar template de ejemplo
-                </a>
-                <span class="text-muted small">
-                    Editá los nombres de categoría y cuenta para que coincidan con los que ya cargaste.
-                </span>
-            </div>
-            <InputFile OnChange="OnFileSelected" class="form-control" accept=".csv,text/csv" />
+            <ul class="import-csv-tips text-muted small">
+                <li>@T["Import.TipNames"]</li>
+                <li>@T["Import.TipType"]</li>
+                <li>@T["Import.TipQuotes"]</li>
+            </ul>
+            @if (!CanUploadCsv)
+            {
+                <div class="alert alert-warning mb-3" role="alert">
+                    <span class="bi bi-exclamation-triangle-fill me-1"></span>
+                    <span>@T["Import.MissingSetup"]</span>
+                </div>
+            }
+            <InputFile OnChange="OnFileSelected" class="form-control" accept=".csv,text/csv" disabled="@(!CanUploadCsv)" />
+            @if (!string.IsNullOrEmpty(importMessage) && !parsedRows.Any())
+            {
+                <div class="alert alert-info mt-3 mb-0">@importMessage</div>
+            }
         </div>
     </div>
 
@@ -38,22 +86,22 @@
     {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span class="fw-bold">Vista previa</span>
-                <span class="badge bg-primary">@parsedRows.Count(r => r.IsValid) válidas / @parsedRows.Count total</span>
+                <span class="fw-bold">@T["Import.Preview"]</span>
+                <span class="badge bg-primary">@ValidRowsCount @T["Import.Valid"] / @parsedRows.Count @T["Import.Total"]</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-sm m-0">
+                    <table class="table table-sm m-0 import-csv-preview-table">
                         <thead>
                             <tr>
                                 <th class="ps-3">#</th>
-                                <th>Fecha</th>
-                                <th>Descripción</th>
-                                <th>Monto</th>
-                                <th>Tipo</th>
-                                <th>Categoría</th>
-                                <th>Cuenta</th>
-                                <th>Estado</th>
+                                <th>@T["Home.Date"]</th>
+                                <th>@T["Transactions.Description"]</th>
+                                <th>@T["Transactions.Amount"]</th>
+                                <th>@T["Transactions.Type"]</th>
+                                <th>@T["Transactions.Category"]</th>
+                                <th>@T["Transactions.Account"]</th>
+                                <th>@T["Import.Status"]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -67,7 +115,16 @@
                                     <td>@(row.Tipo?.ToString() ?? "-")</td>
                                     <td>@row.CategoriaNombre</td>
                                     <td>@row.CuentaNombre</td>
-                                    <td>@(row.IsValid ? "OK" : row.ErrorMessage)</td>
+                                    <td>
+                                        @if (row.IsValid)
+                                        {
+                                            <span class="badge admin-status-badge admin-status-ok">OK</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-danger fw-semibold">@row.ErrorMessage</span>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -79,8 +136,9 @@
                 {
                     <div class="alert alert-info mb-3">@importMessage</div>
                 }
-                <button class="btn btn-primary" disabled="@(!parsedRows.Any(r => r.IsValid))" @onclick="ConfirmarImportacion">
-                    Confirmar importación (@parsedRows.Count(r => r.IsValid) filas)
+                <button class="btn btn-primary" disabled="@(ValidRowsCount == 0)" @onclick="ConfirmarImportacion">
+                    <span class="bi bi-check2-circle me-1"></span>
+                    <span>@T["Import.Confirm"]</span> (@ValidRowsCount @T["Import.Rows"])
                 </button>
             </div>
         </div>
@@ -93,13 +151,19 @@
     private List<Cuenta> cuentas = [];
     private List<Categoria> categorias = [];
     private string? importMessage;
+    private bool CanUploadCsv => cuentas.Count > 0 && categorias.Count > 0;
+    private int ValidRowsCount => parsedRows.Count(r => r.IsValid);
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         userId = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
-        cuentas = await FinancialService.GetCuentasAsync(userId);
-        categorias = await FinancialService.GetCategoriasAsync(userId);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await FinancialService.EnsureDefaultCategoriasAsync(userId);
+            cuentas = await FinancialService.GetCuentasAsync(userId);
+            categorias = await FinancialService.GetCategoriasAsync(userId);
+        }
     }
 
     private async Task OnFileSelected(InputFileChangeEventArgs e)
@@ -107,6 +171,11 @@
         importMessage = null;
         var file = e.File;
         if (file is null) return;
+        if (!CanUploadCsv)
+        {
+            importMessage = T["Import.MissingSetup"];
+            return;
+        }
 
         await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
         using var reader = new StreamReader(stream);
@@ -119,13 +188,13 @@
         try
         {
             var count = await FinancialService.ImportTransaccionesBatchAsync(parsedRows, userId);
-            importMessage = $"Se importaron {count} transacciones correctamente.";
+            importMessage = string.Format(T["Import.Success"], count);
             cuentas = await FinancialService.GetCuentasAsync(userId);
             parsedRows = [];
         }
         catch (Exception ex)
         {
-            importMessage = $"Error en la importación: {ex.Message}";
+            importMessage = string.Format(T["Import.Error"], ex.Message);
         }
     }
 }

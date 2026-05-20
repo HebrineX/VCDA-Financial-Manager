@@ -9,15 +9,15 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
 
-<PageTitle>Eliminar datos personales - VCDA-Financial-Manager</PageTitle>
+<PageTitle>@T["Identity.DeletePersonalData.Title"] - @T["Identity.BrandSuffix"]</PageTitle>
 
 <StatusMessage Message="@message" />
 
-<h3>Eliminar datos personales</h3>
+<h3>@T["Identity.DeletePersonalData.Title"]</h3>
 
 <div class="alert alert-warning" role="alert">
     <p>
-            <strong>Eliminar estos datos borra permanentemente tu cuenta y no se puede recuperar.</strong>
+            <strong>@T["Identity.DeletePersonalData.Warning"]</strong>
     </p>
 </div>
 
@@ -27,13 +27,18 @@
         <ValidationSummary class="text-danger" role="alert" />
         @if (requirePassword)
         {
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Ingresá tu contraseña." />
-                <label for="Input.Password" class="form-label">Contraseña</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger" />
+            <div class="password-field mb-3">
+                <div class="form-floating">
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="@T["Identity.Password"]" />
+                    <label for="Input.Password" class="form-label">@T["Identity.Password"]</label>
+                </div>
+                <button type="button" class="password-toggle" data-toggle-password="Input.Password" aria-label="@T["Identity.PasswordShow"]" data-show-label="@T["Identity.PasswordShow"]" data-hide-label="@T["Identity.PasswordHide"]">
+                    <span class="bi bi-eye"></span>
+                </button>
             </div>
+            <ValidationMessage For="() => Input.Password" class="text-danger" />
         }
-        <button class="w-100 btn btn-lg btn-danger" type="submit">Eliminar datos y cerrar mi cuenta</button>
+        <button class="w-100 btn btn-lg btn-danger" type="submit">@T["Identity.DeletePersonalData.Submit"]</button>
     </EditForm>
 </div>
 
@@ -71,7 +76,7 @@
 
         if (requirePassword && !await UserManager.CheckPasswordAsync(user, Input.Password))
         {
-            message = "Error: contraseña incorrecta.";
+            message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.DeletePersonalData.BadPassword"]}";
             return;
         }
 

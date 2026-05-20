@@ -13,10 +13,10 @@
 @inject PublicLinkService PublicLinkService
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Resend email confirmation</PageTitle>
+<PageTitle>@T["Identity.ResendEmail.Title"]</PageTitle>
 
-<h1>Resend email confirmation</h1>
-<h2>Enter your email.</h2>
+<h1>@T["Identity.ResendEmail.Title"]</h1>
+<h2>@T["Identity.ResendEmail.Subtitle"]</h2>
 <hr />
 <StatusMessage Message="@message" />
 <div class="row">
@@ -25,11 +25,11 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" aria-required="true" placeholder="@T["Identity.EmailPlaceholder"]" />
+                <label for="Input.Email" class="form-label">@T["Identity.Email"]</label>
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">@T["Identity.ResendEmail.Submit"]</button>
         </EditForm>
     </div>
 </div>
@@ -50,7 +50,7 @@
         var user = await UserManager.FindByEmailAsync(Input.Email!);
         if (user is null)
         {
-            message = "Verification email sent. Please check your email.";
+            message = T["Identity.ResendEmail.Sent"];
             return;
         }
 
@@ -62,7 +62,7 @@
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
-        message = "Verification email sent. Please check your email.";
+        message = T["Identity.ResendEmail.Sent"];
     }
 
     private sealed class InputModel
