@@ -7,22 +7,26 @@ namespace VCDA.FinancialManager.Web.Services;
 
 public class AdminUserService(UserManager<ApplicationUser> userManager)
 {
-    public async Task<List<UserAdminInfo>> GetUsersAsync()
+    public async Task<List<AdminUserViewModel>> GetUsersAsync()
     {
         var users = await userManager.Users
             .OrderBy(u => u.Email)
             .ToListAsync();
 
-        var result = new List<UserAdminInfo>();
+        var result = new List<AdminUserViewModel>();
         foreach (var user in users)
         {
             var roles = await userManager.GetRolesAsync(user);
-            result.Add(new UserAdminInfo
+            var email = user.Email ?? user.UserName ?? "";
+            var nickname = GetNicknameFallback(user);
+
+            result.Add(new AdminUserViewModel
             {
                 Id = user.Id,
-                Email = user.Email ?? user.UserName ?? "",
+                Email = email,
+                DisplayName = string.IsNullOrWhiteSpace(nickname) ? email : nickname,
                 EmailConfirmed = user.EmailConfirmed,
-                IsLockedOut = await userManager.IsLockedOutAsync(user),
+                IsDeactivated = await userManager.IsLockedOutAsync(user),
                 Roles = roles
             });
         }
@@ -30,24 +34,42 @@ public class AdminUserService(UserManager<ApplicationUser> userManager)
         return result;
     }
 
-    public async Task<bool> ToggleLockoutAsync(string userId)
+    public async Task<(bool Success, string? Error)> SetUserDeactivationAsync(
+        string userId,
+        bool deactivate)
     {
         var user = await userManager.FindByIdAsync(userId);
         if (user is null)
         {
-            return false;
+            return (false, "Usuario no encontrado.");
         }
 
-        if (await userManager.IsLockedOutAsync(user))
+        var isLockedOut = await userManager.IsLockedOutAsync(user);
+        if (deactivate == isLockedOut)
+        {
+            return (true, null);
+        }
+
+        if (!deactivate)
         {
             var result = await userManager.SetLockoutEndDateAsync(user, null);
-            return result.Succeeded;
+            return result.Succeeded
+                ? (true, null)
+                : (false, string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        if (await userManager.IsInRoleAsync(user, AppRoles.Admin)
+            && !await HasAnotherActiveAdminAsync(user.Id))
+        {
+            return (false, "No se puede desactivar el último administrador activo.");
         }
 
         await userManager.SetLockoutEnabledAsync(user, true);
         var lockResult = await userManager.SetLockoutEndDateAsync(
             user, DateTimeOffset.UtcNow.AddYears(100));
-        return lockResult.Succeeded;
+        return lockResult.Succeeded
+            ? (true, null)
+            : (false, string.Join(" ", lockResult.Errors.Select(e => e.Description)));
     }
 
     public async Task<(bool Success, string? Error)> SetUserAdminRoleAsync(
@@ -96,5 +118,24 @@ public class AdminUserService(UserManager<ApplicationUser> userManager)
         return removeResult.Succeeded
             ? (true, null)
             : (false, string.Join(" ", removeResult.Errors.Select(e => e.Description)));
+    }
+
+    private async Task<bool> HasAnotherActiveAdminAsync(string userId)
+    {
+        var admins = await userManager.GetUsersInRoleAsync(AppRoles.Admin);
+        foreach (var admin in admins.Where(a => a.Id != userId))
+        {
+            if (!await userManager.IsLockedOutAsync(admin))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string? GetNicknameFallback(ApplicationUser user)
+    {
+        return user.GetType().GetProperty("Nickname")?.GetValue(user) as string;
     }
 }

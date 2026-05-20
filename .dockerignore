@@ -9,4 +9,5 @@ VirgoFinancialManager.Web/Data/*.db-shm
 VirgoFinancialManager.Web/Data/*.db-wal
 .env
 .env.*
+certbot/cloudflare.ini
 README.md.bak

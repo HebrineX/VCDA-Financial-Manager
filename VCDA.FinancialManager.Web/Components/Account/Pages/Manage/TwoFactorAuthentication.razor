@@ -12,6 +12,23 @@
 
 <StatusMessage />
 <h3>Two-factor authentication (2FA)</h3>
+@if (!is2faEnabled)
+{
+    if (isAdmin)
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>2FA obligatorio para Admin.</strong>
+            <p class="mb-0">Tu cuenta tiene permisos administrativos. Configura una app autenticadora para cumplir el requisito de seguridad antes de operar como Admin.</p>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info" role="alert">
+            <strong>2FA recomendado.</strong>
+            <p class="mb-0">Activar una app autenticadora agrega una capa de proteccion opcional para tu cuenta.</p>
+        </div>
+    }
+}
 @if (canTrack)
 {
     if (is2faEnabled)
@@ -75,6 +92,7 @@ else
     private int recoveryCodesLeft;
     private bool is2faEnabled;
     private bool isMachineRemembered;
+    private bool isAdmin;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -93,6 +111,7 @@ else
         is2faEnabled = await UserManager.GetTwoFactorEnabledAsync(user);
         isMachineRemembered = await SignInManager.IsTwoFactorClientRememberedAsync(user);
         recoveryCodesLeft = await UserManager.CountRecoveryCodesAsync(user);
+        isAdmin = await UserManager.IsInRoleAsync(user, AppRoles.Admin);
     }
 
     private async Task OnSubmitForgetBrowserAsync()

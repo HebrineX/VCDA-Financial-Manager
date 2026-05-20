@@ -216,6 +216,140 @@ Para restaurar, deten los contenedores, reemplaza `docker-data/app/` por el back
 docker compose up --build -d
 ```
 
+## Produccion 443 con dominio y Let's Encrypt
+
+Dominio objetivo:
+
+```text
+https://finanzas.vircomdelan.com.ar
+```
+
+La configuracion productiva usa:
+
+- Solo puerto publico `443`.
+- Nginx con TLS y HTTP/2.
+- Certificado Let's Encrypt emitido por DNS-01 usando Cloudflare.
+- App `web` interna en Docker, sin publicar `8080` a Internet.
+
+### DNS
+
+En Cloudflare:
+
+```text
+Type: A
+Name: finanzas
+Content: 186.23.239.60
+Proxy status: DNS only
+TTL: Auto
+```
+
+Para emitir el certificado con Certbot DNS-01, el proxy naranja de Cloudflare no es necesario. Usar `DNS only` simplifica la validacion.
+
+### Router
+
+Abrir solo:
+
+```text
+TCP 443 externo -> IP_LOCAL_DE_LA_PC_DOCKER:443
+```
+
+No abrir `80`, `8080` ni `8443` para produccion.
+
+### Variables `.env`
+
+Agregar o ajustar:
+
+```env
+APP_PUBLIC_BASE_URL=https://finanzas.vircomdelan.com.ar
+APP_RESET_DATABASE_ON_START=false
+LETSENCRYPT_EMAIL=tu-email-real@example.com
+```
+
+Mantener tambien `DATAPROTECTION_CERT_PASSWORD`, SMTP y demas secretos ya configurados.
+
+### Token Cloudflare
+
+Crear un API Token en Cloudflare con permisos minimos:
+
+```text
+Zone.Zone: Read
+Zone.DNS: Edit
+Scope: vircomdelan.com.ar
+```
+
+Crear el archivo local:
+
+```powershell
+New-Item -ItemType Directory -Force -Path .\certbot | Out-Null
+Copy-Item .\certbot\cloudflare.ini.example .\certbot\cloudflare.ini
+```
+
+Editar `certbot/cloudflare.ini` y reemplazar:
+
+```text
+dns_cloudflare_api_token = REEMPLAZAR_CON_TOKEN_CLOUDFLARE_DNS_EDIT
+```
+
+No subir `certbot/cloudflare.ini` al repositorio.
+
+### Emitir certificado
+
+Antes de levantar produccion por primera vez:
+
+```powershell
+docker compose -p vcda-prod -f docker-compose.prod.yml --profile certbot run --rm certbot
+```
+
+Esto crea certificados en:
+
+```text
+docker-data/letsencrypt/live/finanzas.vircomdelan.com.ar/
+```
+
+### Levantar produccion
+
+Detener el stack local para no usar la misma base SQLite desde dos stacks:
+
+```powershell
+docker compose down
+```
+
+Levantar produccion:
+
+```powershell
+docker compose -p vcda-prod -f docker-compose.prod.yml up --build -d web nginx
+```
+
+Validar:
+
+```powershell
+docker compose -p vcda-prod -f docker-compose.prod.yml ps
+curl.exe -k https://localhost/health
+```
+
+Luego abrir:
+
+```text
+https://finanzas.vircomdelan.com.ar
+```
+
+El navegador no deberia mostrar advertencia de certificado si DNS, puerto 443 y Let's Encrypt estan correctos.
+
+### Renovar certificado
+
+Let's Encrypt vence cada 90 dias. Renovar manualmente con:
+
+```powershell
+docker compose -p vcda-prod -f docker-compose.prod.yml --profile certbot run --rm certbot renew `
+  --dns-cloudflare `
+  --dns-cloudflare-credentials /run/secrets/cloudflare.ini `
+  --dns-cloudflare-propagation-seconds 60
+
+docker compose -p vcda-prod -f docker-compose.prod.yml exec nginx nginx -s reload
+```
+
+Mas adelante se puede automatizar esta renovacion con una tarea programada de Windows.
+
 ## Reset controlado de base de datos
 
 Para borrar y recrear la base en el proximo arranque Docker:
@@ -285,7 +419,7 @@ Fecha,Descripcion,Monto,Tipo,Categoria,Cuenta
 
 - Confirmar que el seed admin configurable por `ADMIN_SEED_*` este definido solo cuando se necesite bootstrap inicial.
 - Reemplazar cualquier credencial de fallback por configuracion externa obligatoria.
-- Usar certificados confiables para Internet o LAN compartida.
+- Emitir y renovar certificados Let's Encrypt para `finanzas.vircomdelan.com.ar`.
 - Guardar `.env`, PFX y backups fuera de Git y con permisos restringidos.
 - Validar restore de backup SQLite antes de depender de el operacionalmente.
 - Revisar limites de rate limiting, tamano de request y politicas de cookies para el dominio final.
@@ -298,7 +432,9 @@ VCDA.FinancialManager.Domain/          Entidades y enums
 VCDA.FinancialManager.Web/             Blazor, Identity, EF, servicios
 VCDA.FinancialManager.Domain.Tests/    Tests de dominio
 docker-compose.yml                     Orquestacion local
+docker-compose.prod.yml                Orquestacion productiva 443 + Let's Encrypt DNS-01
 Dockerfile                             Imagen de la app
 nginx/                                 Reverse proxy HTTPS
+certbot/cloudflare.ini.example         Plantilla para token DNS Cloudflare
 .env.example                           Plantilla publica sin secretos reales
 ```

@@ -101,27 +101,35 @@
                             <i class="bi bi-check-circle-fill me-2"></i> ¡Movimiento registrado!
                         </div>
                     }
+                    @if (cuentas is { Count: 0 })
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-wallet2 me-2"></i>
+                            <span data-i18n="transactions.noAccount">Antes de registrar movimientos tenés que crear al menos una cuenta.</span>
+                            <a href="/cuentas" class="alert-link" data-i18n="transactions.createAccount">Crear cuenta</a>
+                        </div>
+                    }
 
                     <EditForm Model="nuevaTx" OnValidSubmit="HandleCreateTransaccion" FormName="CreateTxForm">
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Tipo de Movimiento</label>
+                            <label class="form-label fw-bold" data-i18n="transactions.type">Tipo de Movimiento</label>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-outline-success flex-fill py-2 @(nuevaTx.Tipo == TipoTransaccion.Ingreso ? "active fw-bold" : "")"
                                         @onclick="() => SetTipoTx(TipoTransaccion.Ingreso)">
-                                    <i class="bi bi-arrow-up-right me-1"></i> Ingreso
+                                    <i class="bi bi-arrow-up-right me-1"></i> <span data-i18n="transactions.income">Ingreso</span>
                                 </button>
                                 <button type="button" class="btn btn-outline-danger flex-fill py-2 @(nuevaTx.Tipo == TipoTransaccion.Egreso ? "active fw-bold" : "")"
                                         @onclick="() => SetTipoTx(TipoTransaccion.Egreso)">
-                                    <i class="bi bi-arrow-down-left me-1"></i> Egreso
+                                    <i class="bi bi-arrow-down-left me-1"></i> <span data-i18n="transactions.expense">Egreso</span>
                                 </button>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="cuenta" class="form-label fw-bold">Cuenta de Origen/Destino</label>
-                            <InputSelect id="cuenta" class="form-select" @bind-Value="nuevaTx.CuentaId" required>
+                            <label for="cuenta" class="form-label fw-bold" data-i18n="transactions.account">Cuenta de Origen/Destino</label>
+                            <InputSelect id="cuenta" class="form-select" @bind-Value="nuevaTx.CuentaId" required disabled="@(cuentas is { Count: 0 })">
                                 <option value="">-- Seleccionar Cuenta --</option>
                                 @if (cuentas != null)
                                 {
@@ -134,7 +142,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="categoria" class="form-label fw-bold">Categoría</label>
+                            <label for="categoria" class="form-label fw-bold" data-i18n="transactions.category">Categoría</label>
                             <InputSelect id="categoria" class="form-select" @bind-Value="nuevaTx.CategoriaId" required>
                                 <option value="">-- Seleccionar Categoría --</option>
                                 @if (categorias != null)
@@ -148,25 +156,32 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="monto" class="form-label fw-bold">Monto</label>
+                            <label for="monto" class="form-label fw-bold" data-i18n="transactions.amount">Monto</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <InputNumber id="monto" class="form-control" @bind-Value="nuevaTx.Monto" required min="0.01" step="0.01" />
+                                <InputText id="monto"
+                                           class="form-control"
+                                           @bind-Value="nuevaTx.MontoTexto"
+                                           inputmode="decimal"
+                                           autocomplete="off"
+                                           placeholder="0,00"
+                                           required />
                             </div>
+                            <div class="form-text text-muted" data-i18n="transactions.amountHint">Podés usar coma o punto decimal.</div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="descripcion" class="form-label fw-bold">Descripción</label>
+                            <label for="descripcion" class="form-label fw-bold" data-i18n="transactions.description">Descripción</label>
                             <InputText id="descripcion" class="form-control" placeholder="Ej: Supermercado, Alquiler, etc." @bind-Value="nuevaTx.Descripcion" />
                         </div>
 
                         <div class="mb-3">
-                            <label for="fecha" class="form-label fw-bold">Fecha</label>
+                            <label for="fecha" class="form-label fw-bold" data-i18n="transactions.date">Fecha</label>
                             <InputDate Type="InputDateType.DateTimeLocal" id="fecha" class="form-control" @bind-Value="nuevaTx.Fecha" required />
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" disabled="@(!cuentas?.Any() ?? true)">
-                            <i class="bi bi-save me-2"></i> Guardar Movimiento
+                            <i class="bi bi-save me-2"></i> <span data-i18n="transactions.save">Guardar Movimiento</span>
                         </button>
                     </EditForm>
                 </div>
@@ -267,9 +282,15 @@
 
         if (string.IsNullOrEmpty(userId)) return;
 
+        if (cuentas is null || cuentas.Count == 0)
+        {
+            errorMessage = "No podés registrar movimientos todavía: primero creá una cuenta.";
+            return;
+        }
+
         if (nuevaTx.CuentaId == Guid.Empty)
         {
-            errorMessage = "Debe seleccionar una cuenta.";
+            errorMessage = "No seleccionaste cuenta. Elegí una cuenta para asociar el movimiento.";
             return;
         }
 
@@ -279,9 +300,9 @@
             return;
         }
 
-        if (nuevaTx.Monto <= 0)
+        if (!TryParseMonto(nuevaTx.MontoTexto, out var monto) || monto <= 0)
         {
-            errorMessage = "El monto debe ser mayor a cero.";
+            errorMessage = "El monto no es válido. Ingresá un número mayor a cero, por ejemplo 1500,50.";
             return;
         }
 
@@ -290,7 +311,7 @@
             await FinancialService.CreateTransaccionAsync(
                 nuevaTx.CuentaId,
                 nuevaTx.CategoriaId,
-                nuevaTx.Monto,
+                monto,
                 nuevaTx.Descripcion,
                 nuevaTx.Fecha,
                 nuevaTx.Tipo,
@@ -337,10 +358,24 @@
     {
         public Guid CuentaId { get; set; } = Guid.Empty;
         public Guid CategoriaId { get; set; } = Guid.Empty;
-        public decimal Monto { get; set; } = 0m;
+        public string MontoTexto { get; set; } = string.Empty;
         public string Descripcion { get; set; } = string.Empty;
         public DateTime Fecha { get; set; } = DateTime.Now;
         public TipoTransaccion Tipo { get; set; } = TipoTransaccion.Egreso;
+    }
+
+    private static bool TryParseMonto(string? value, out decimal monto)
+    {
+        var normalized = (value ?? string.Empty).Trim();
+        normalized = normalized.Contains(',')
+            ? normalized.Replace(".", "").Replace(',', '.')
+            : normalized;
+
+        return decimal.TryParse(
+            normalized,
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out monto);
     }
 
     public class CategoriaFormModel

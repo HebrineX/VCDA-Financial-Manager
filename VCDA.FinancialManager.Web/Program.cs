@@ -22,6 +22,7 @@ var resetDatabaseOnStartup = builder.Configuration.GetValue("App:ResetDatabaseOn
 builder.Services.AddScoped<FinancialService>();
 builder.Services.AddScoped<AdminUserService>();
 builder.Services.AddScoped<PublicLinkService>();
+builder.Services.AddMemoryCache();
 builder.Services.AddOptions<AdminSeedOptions>()
     .Bind(builder.Configuration.GetSection(AdminSeedOptions.SectionName))
     .Validate(options => !builder.Environment.IsProduction() || !options.Enabled || options.IsConfigured,

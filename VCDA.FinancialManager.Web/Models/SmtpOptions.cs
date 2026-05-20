@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.Mail;
 
 namespace VCDA.FinancialManager.Web.Models;
 
@@ -27,7 +28,7 @@ public class SmtpOptions
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(Host)
         && Port is >= 1 and <= 65535
-        && !string.IsNullOrWhiteSpace(FromEmail)
+        && IsValidMailbox(FromEmail)
         && (string.IsNullOrWhiteSpace(Username) || !string.IsNullOrWhiteSpace(Password));
 
     public void Validate()
@@ -47,9 +48,32 @@ public class SmtpOptions
             throw new InvalidOperationException("SMTP no configurado: falta Smtp:FromEmail.");
         }
 
+        if (!IsValidMailbox(FromEmail))
+        {
+            throw new InvalidOperationException("SMTP no configurado: Smtp:FromEmail debe tener formato de email valido.");
+        }
+
         if (!string.IsNullOrWhiteSpace(Username) && string.IsNullOrWhiteSpace(Password))
         {
             throw new InvalidOperationException("SMTP no configurado: falta Smtp:Password para el usuario configurado.");
+        }
+    }
+
+    private static bool IsValidMailbox(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        try
+        {
+            var address = new MailAddress(email);
+            return string.Equals(address.Address, email.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (FormatException)
+        {
+            return false;
         }
     }
 }

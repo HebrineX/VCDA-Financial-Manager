@@ -12,8 +12,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
       - App__EnforceHttps=false
-      - App__PublicBaseUrl=${APP_PUBLIC_BASE_URL:-https://localhost:8443}
-      - App__ResetDatabaseOnStartup=${APP_RESET_DATABASE_ON_START:-false}
+      - App__PublicBaseUrl=https://finanzas.vircomdelan.com.ar
+      - App__ResetDatabaseOnStartup=false
       - App__TrustedProxyNetworks__0=${APP_TRUSTED_PROXY_NETWORKS:-172.16.0.0/12}
       - AdminSeed__Enabled=${ADMIN_SEED_ENABLED:-false}
       - AdminSeed__Email=${ADMIN_SEED_EMAIL:-}
@@ -32,13 +32,34 @@ services:
       - ./docker-data/dataprotection:/home/app/.aspnet/DataProtection-Keys
       - ./docker-data/certs:/app/certs:ro
       - ./docker-data/app:/app/Data
+
   nginx:
     image: nginx:1.27-alpine
     depends_on:
       - web
     ports:
-      - "${APP_HTTP_PORT:-8080}:80"
-      - "${APP_HTTPS_PORT:-8443}:443"
+      - "443:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker-data/certs:/etc/nginx/certs:ro
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker-data/letsencrypt:/etc/letsencrypt:ro
+
+  certbot:
+    image: certbot/dns-cloudflare:latest
+    profiles:
+      - certbot
+    volumes:
+      - ./docker-data/letsencrypt:/etc/letsencrypt
+      - ./certbot/cloudflare.ini:/run/secrets/cloudflare.ini:ro
+    command:
+      - certonly
+      - --dns-cloudflare
+      - --dns-cloudflare-credentials
+      - /run/secrets/cloudflare.ini
+      - --dns-cloudflare-propagation-seconds
+      - "60"
+      - --non-interactive
+      - --agree-tos
+      - --email
+      - ${LETSENCRYPT_EMAIL}
+      - -d
+      - finanzas.vircomdelan.com.ar

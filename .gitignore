@@ -6,9 +6,12 @@
 docker-data/certs/
 docker-data/dataprotection/
 docker-data/app/
+docker-data/letsencrypt/
+certbot/cloudflare.ini
 
 # Harness local de trabajo
 .hebrinex/
+.local-skills/
 
 # Base de datos SQLite local
 *.db

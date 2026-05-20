@@ -5,6 +5,7 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.WebUtilities
 @using VCDA.FinancialManager.Web.Data
 @using VCDA.FinancialManager.Web.Services
@@ -15,6 +16,7 @@
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject ILogger<Register> Logger
 @inject PublicLinkService PublicLinkService
+@inject ApplicationDbContext DbContext
 @inject IdentityRedirectManager RedirectManager
 
 <PageTitle>Registrarse - VCDA-Financial-Manager</PageTitle>
@@ -22,47 +24,67 @@
 <div class="container py-5 animated-fade-in d-flex justify-content-center align-items-center" style="min-height: 80vh;">
     <div class="card p-3 shadow-lg w-100" style="max-width: 480px; border-radius: 16px;">
         <div class="card-body">
-            <h2 class="fw-bold mb-4 text-center text-gradient">Registrarse</h2>
+            <h2 class="fw-bold mb-4 text-center text-gradient" data-i18n="register.title">Registrarse</h2>
             <StatusMessage Message="@Message" />
+            <div id="registerClientErrors" class="alert alert-danger d-none" role="alert"></div>
             
-            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register" Enhance="false" data-vcda-register-form="true">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="text-danger mb-3" role="alert" />
                 
                 <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Nickname" id="Input.Nickname" class="form-control" autocomplete="nickname" aria-required="true" placeholder="tu usuario" />
+                    <label for="Input.Nickname" class="form-label" data-i18n="register.nickname">Nickname</label>
+                    <ValidationMessage For="() => Input.Nickname" class="text-danger" />
+                </div>
+
+                <div class="form-floating mb-3">
                     <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Correo Electrónico</label>
+                    <label for="Input.Email" class="form-label" data-i18n="register.email">Correo Electrónico</label>
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
                 
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="contraseña" />
-                    <label for="Input.Password" class="form-label">Contraseña</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                <div class="password-field mb-3">
+                    <div class="form-floating">
+                        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="contraseña" />
+                        <label for="Input.Password" class="form-label" data-i18n="register.password">Contraseña</label>
+                    </div>
+                    <button type="button" class="password-toggle" data-toggle-password="Input.Password" aria-label="Ver contraseña" data-show-label="Ver contraseña" data-hide-label="Ocultar contraseña">
+                        <span class="bi bi-eye"></span>
+                    </button>
                 </div>
-                
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="confirmar contraseña" />
-                    <label for="Input.ConfirmPassword" class="form-label">Confirmar Contraseña</label>
-                    <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                <div class="password-rules small text-muted mb-3" data-i18n="register.passwordRules">
+                    Mínimo 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.
                 </div>
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
                 
-                <button type="submit" class="w-100 btn btn-primary py-2 mb-3">Registrar Cuenta</button>
+                <div class="password-field mb-3">
+                    <div class="form-floating">
+                        <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="confirmar contraseña" />
+                        <label for="Input.ConfirmPassword" class="form-label" data-i18n="register.confirmPassword">Confirmar Contraseña</label>
+                    </div>
+                    <button type="button" class="password-toggle" data-toggle-password="Input.ConfirmPassword" aria-label="Ver confirmación de contraseña" data-show-label="Ver confirmación de contraseña" data-hide-label="Ocultar confirmación de contraseña">
+                        <span class="bi bi-eye"></span>
+                    </button>
+                </div>
+                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+                
+                <button type="submit" class="w-100 btn btn-primary py-2 mb-3" data-i18n="register.submit" data-register-submit="true">Registrar Cuenta</button>
             </EditForm>
             
             @if (externalLogins.Length > 0)
             {
                 <hr />
                 <div class="text-center">
-                    <p class="text-muted small">O regístrate usando otros servicios</p>
+                    <p class="text-muted small" data-i18n="register.external">O registrate usando otros servicios</p>
                     <ExternalLoginPicker />
                 </div>
             }
             
             <hr />
             <div class="text-center mt-3">
-                <p class="text-muted small mb-1">¿Ya tienes una cuenta?</p>
-                <a href="Account/Login" class="fw-bold text-decoration-none">Iniciar Sesión</a>
+                <p class="text-muted small mb-1" data-i18n="register.haveAccount">¿Ya tenés una cuenta?</p>
+                <a href="Account/Login" class="fw-bold text-decoration-none" data-i18n="register.login">Iniciar Sesión</a>
             </div>
         </div>
     </div>
@@ -88,6 +110,19 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
+        var nickname = NormalizeNickname(Input.Nickname);
+        var normalizedNickname = UserManager.NormalizeName(nickname) ?? nickname.ToUpperInvariant();
+        var nicknameTaken = await DbContext.Users.AnyAsync(user => user.NormalizedNickname == normalizedNickname);
+        if (nicknameTaken)
+        {
+            identityErrors = [new IdentityError
+            {
+                Code = "DuplicateNickname",
+                Description = "Ese nickname ya esta registrado. Elegi otro."
+            }];
+            return;
+        }
+
         var existingUser = await UserManager.FindByNameAsync(Input.Email);
         if (existingUser is not null)
         {
@@ -109,6 +144,8 @@
         }
 
         var user = CreateUser();
+        user.Nickname = nickname;
+        user.NormalizedNickname = normalizedNickname;
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -176,13 +213,22 @@
 
     private static string GetDisplayError(IdentityError error) => error.Code switch
     {
+        "DuplicateNickname" => "Ese nickname ya esta registrado. Elegi otro.",
         nameof(IdentityErrorDescriber.DuplicateUserName) => "Ese correo ya esta registrado. Inicia sesion o usa recuperar contrasena.",
         nameof(IdentityErrorDescriber.DuplicateEmail) => "Ese correo ya esta registrado. Inicia sesion o usa recuperar contrasena.",
         _ => error.Description
     };
 
+    private static string NormalizeNickname(string nickname) => nickname.Trim();
+
     private sealed class InputModel
     {
+        [Required(ErrorMessage = "El nickname es obligatorio.")]
+        [StringLength(32, MinimumLength = 3, ErrorMessage = "El nickname debe tener entre {2} y {1} caracteres.")]
+        [RegularExpression(@"^[a-zA-Z0-9_.-]+$", ErrorMessage = "Usa solo letras, numeros, guion, guion bajo o punto.")]
+        [Display(Name = "Nickname")]
+        public string Nickname { get; set; } = "";
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]
@@ -196,7 +242,7 @@
 
         [DataType(DataType.Password)]
         [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        [Compare("Password", ErrorMessage = "La contraseña y su confirmación no coinciden.")]
         public string ConfirmPassword { get; set; } = "";
     }
 }

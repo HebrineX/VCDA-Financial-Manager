@@ -1,0 +1,3 @@
+# Copiar como certbot/cloudflare.ini y reemplazar el token.
+# No subir certbot/cloudflare.ini al repositorio.
+dns_cloudflare_api_token = REEMPLAZAR_CON_TOKEN_CLOUDFLARE_DNS_EDIT

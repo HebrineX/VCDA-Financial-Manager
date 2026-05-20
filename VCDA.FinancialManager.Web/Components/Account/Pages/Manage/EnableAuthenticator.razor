@@ -4,7 +4,9 @@
 @using System.Globalization
 @using System.Text
 @using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Identity
+@using QRCoder
 @using VCDA.FinancialManager.Web.Data
 
 @inject UserManager<ApplicationUser> UserManager
@@ -12,7 +14,7 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EnableAuthenticator> Logger
 
-<PageTitle>Configure authenticator app</PageTitle>
+<PageTitle>Configurar app autenticadora</PageTitle>
 
 @if (recoveryCodes is not null)
 {
@@ -21,41 +23,44 @@
 else
 {
     <StatusMessage Message="@message" />
-    <h3>Configure authenticator app</h3>
+    <h3>Configurar app autenticadora</h3>
     <div>
-        <p>To use an authenticator app go through the following steps:</p>
+        <p>La verificacion en dos pasos protege tu cuenta aunque alguien obtenga tu contrasena.</p>
         <ol class="list">
             <li>
                 <p>
-                    Download a two-factor authenticator app like Microsoft Authenticator for
+                    Instala una app autenticadora como Microsoft Authenticator para
                     <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> and
-                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> or
-                    Google Authenticator for
+                    <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> o
+                    Google Authenticator para
                     <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a> and
                     <a href="https://itunes.apple.com/us/app/google-authenticator/id388497605?mt=8">iOS</a>.
                 </p>
             </li>
             <li>
-                <p>Scan the QR Code or enter this key <kbd>@sharedKey</kbd> into your two factor authenticator app. Spaces and casing do not matter.</p>
-                <div class="alert alert-info">Learn how to <a href="https://go.microsoft.com/fwlink/?Linkid=852423">enable QR code generation</a>.</div>
-                <div></div>
-                <div data-url="@authenticatorUri"></div>
+                <p>Escanea el codigo QR o ingresa esta clave manualmente: <kbd>@sharedKey</kbd>. Los espacios y mayusculas no importan.</p>
+                @if (qrCodeSvg is not null)
+                {
+                    <div class="border rounded bg-white d-inline-block p-3 mb-2" aria-label="Codigo QR para configurar la app autenticadora">
+                        @qrCodeSvg
+                    </div>
+                }
+                <p class="text-muted small">Issuer: <strong>@AuthenticatorIssuer</strong></p>
             </li>
             <li>
                 <p>
-                    Once you have scanned the QR code or input the key above, your two factor authentication app will provide you
-                    with a unique code. Enter the code in the confirmation box below.
+                    Luego de escanear el QR o cargar la clave, tu app mostrara un codigo unico. Ingresalo abajo para confirmar.
                 </p>
                 <div class="row">
                     <div class="col-xl-6">
                         <EditForm Model="Input" FormName="send-code" OnValidSubmit="OnValidSubmitAsync" method="post">
                             <DataAnnotationsValidator />
                             <div class="form-floating mb-3">
-                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" placeholder="Enter the code" />
-                                <label for="Input.Code" class="control-label form-label">Verification Code</label>
+                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" placeholder="Ingresa el codigo" />
+                                <label for="Input.Code" class="control-label form-label">Codigo de verificacion</label>
                                 <ValidationMessage For="() => Input.Code" class="text-danger" />
                             </div>
-                            <button type="submit" class="w-100 btn btn-lg btn-primary">Verify</button>
+                            <button type="submit" class="w-100 btn btn-lg btn-primary">Verificar</button>
                             <ValidationSummary class="text-danger" role="alert" />
                         </EditForm>
                     </div>
@@ -66,12 +71,14 @@ else
 }
 
 @code {
-    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
+    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&algorithm=SHA1&digits=6&period=30";
+    private const string AuthenticatorIssuer = "VCDA-Financial-Manager";
 
     private string? message;
     private ApplicationUser? user;
     private string? sharedKey;
     private string? authenticatorUri;
+    private MarkupString? qrCodeSvg;
     private IEnumerable<string>? recoveryCodes;
 
     [CascadingParameter]
@@ -110,7 +117,7 @@ else
 
         if (!is2faTokenValid)
         {
-            message = "Error: Verification code is invalid.";
+            message = "Error: el codigo de verificacion no es valido.";
             return;
         }
 
@@ -118,7 +125,7 @@ else
         var userId = await UserManager.GetUserIdAsync(user);
         Logger.LogInformation("User with ID '{UserId}' has enabled 2FA with an authenticator app.", userId);
 
-        message = "Your authenticator app has been verified.";
+        message = "Tu app autenticadora fue verificada.";
 
         if (await UserManager.CountRecoveryCodesAsync(user) == 0)
         {
@@ -144,6 +151,7 @@ else
 
         var email = await UserManager.GetEmailAsync(user);
         authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
+        qrCodeSvg = new MarkupString(CreateQrCodeSvg(authenticatorUri));
     }
 
     private string FormatKey(string unformattedKey)
@@ -168,17 +176,555 @@ else
         return string.Format(
             CultureInfo.InvariantCulture,
             AuthenticatorUriFormat,
-            UrlEncoder.Encode("Microsoft.AspNetCore.Identity.UI"),
+            UrlEncoder.Encode(AuthenticatorIssuer),
             UrlEncoder.Encode(email),
             unformattedKey);
+    }
+
+    private static string CreateQrCodeSvg(string payload)
+    {
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(payload, QRCodeGenerator.ECCLevel.Q);
+        var qrCode = new SvgQRCode(data);
+        return qrCode.GetGraphic(8);
+    }
+
+    private static class QrCodeSvg
+    {
+        private static readonly int[] ByteCapacitiesLow = [17, 32, 53, 78, 106, 134, 154, 192, 230, 271];
+        private static readonly int[] ErrorCodewordsLow = [7, 10, 15, 20, 26, 18, 20, 24, 30, 18];
+        private static readonly int[] DataCodewordsLow = [19, 34, 55, 80, 108, 136, 156, 194, 232, 274];
+        private static readonly int[][] BlockDataCodewordsLow =
+        [
+            [19],
+            [34],
+            [55],
+            [80],
+            [108],
+            [68, 68],
+            [78, 78],
+            [97, 97],
+            [116, 116],
+            [68, 68, 69, 69]
+        ];
+        private static readonly int[][] AlignmentPatterns =
+        [
+            [],
+            [6, 18],
+            [6, 22],
+            [6, 26],
+            [6, 30],
+            [6, 34],
+            [6, 22, 38],
+            [6, 24, 42],
+            [6, 26, 46],
+            [6, 28, 50]
+        ];
+
+        public static string Create(string text)
+        {
+            var data = Encoding.UTF8.GetBytes(text);
+            var version = Array.FindIndex(ByteCapacitiesLow, capacity => data.Length <= capacity) + 1;
+            if (version == 0)
+            {
+                throw new InvalidOperationException("Authenticator URI is too long for the built-in QR generator.");
+            }
+
+            var modules = BuildMatrix(version, data);
+            var scale = 6;
+            var quietZone = 4;
+            var size = modules.GetLength(0);
+            var pixels = (size + quietZone * 2) * scale;
+            var svg = new StringBuilder();
+            svg.Append(CultureInfo.InvariantCulture, $"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{pixels}\" height=\"{pixels}\" viewBox=\"0 0 {pixels} {pixels}\" role=\"img\" aria-label=\"Codigo QR 2FA\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\"/>");
+            svg.Append("<path fill=\"#111827\" d=\"");
+
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    if (modules[y, x])
+                    {
+                        var px = (x + quietZone) * scale;
+                        var py = (y + quietZone) * scale;
+                        svg.Append(CultureInfo.InvariantCulture, $"M{px},{py}h{scale}v{scale}h-{scale}z");
+                    }
+                }
+            }
+
+            svg.Append("\"/></svg>");
+            return svg.ToString();
+        }
+
+        private static bool[,] BuildMatrix(int version, byte[] data)
+        {
+            var size = version * 4 + 17;
+            var modules = new bool[size, size];
+            var reserved = new bool[size, size];
+
+            AddFinder(modules, reserved, 0, 0);
+            AddFinder(modules, reserved, size - 7, 0);
+            AddFinder(modules, reserved, 0, size - 7);
+            AddTiming(modules, reserved);
+            AddAlignment(modules, reserved, version);
+            AddDarkModule(modules, reserved, version);
+            AddVersionBits(modules, reserved, version);
+
+            var codewords = BuildCodewords(version, data);
+            AddData(modules, reserved, codewords);
+
+            var bestMask = 0;
+            var bestPenalty = int.MaxValue;
+            var bestModules = modules;
+            for (var mask = 0; mask < 8; mask++)
+            {
+                var candidate = (bool[,])modules.Clone();
+                ApplyMask(candidate, reserved, mask);
+                AddFormatBits(candidate, reserved, mask);
+                var penalty = CalculatePenalty(candidate);
+                if (penalty < bestPenalty)
+                {
+                    bestPenalty = penalty;
+                    bestMask = mask;
+                    bestModules = candidate;
+                }
+            }
+
+            AddFormatBits(bestModules, reserved, bestMask);
+            return bestModules;
+        }
+
+        private static byte[] BuildCodewords(int version, byte[] data)
+        {
+            var bits = new List<bool>();
+            AppendBits(bits, 0b0100, 4);
+            AppendBits(bits, data.Length, version < 10 ? 8 : 16);
+            foreach (var value in data)
+            {
+                AppendBits(bits, value, 8);
+            }
+
+            var dataCodewords = DataCodewordsLow[version - 1];
+            var capacityBits = dataCodewords * 8;
+            AppendBits(bits, 0, Math.Min(4, capacityBits - bits.Count));
+            while (bits.Count % 8 != 0)
+            {
+                bits.Add(false);
+            }
+
+            var bytes = new List<byte>();
+            for (var i = 0; i < bits.Count; i += 8)
+            {
+                var value = 0;
+                for (var j = 0; j < 8; j++)
+                {
+                    value = (value << 1) | (bits[i + j] ? 1 : 0);
+                }
+                bytes.Add((byte)value);
+            }
+
+            for (var pad = 0; bytes.Count < dataCodewords; pad++)
+            {
+                bytes.Add((byte)(pad % 2 == 0 ? 0xEC : 0x11));
+            }
+
+            return InterleaveBlocks(version, bytes.ToArray());
+        }
+
+        private static byte[] InterleaveBlocks(int version, byte[] data)
+        {
+            var blockSizes = BlockDataCodewordsLow[version - 1];
+            var errorCodewordsPerBlock = ErrorCodewordsLow[version - 1];
+            var blocks = new List<byte[]>();
+            var errorBlocks = new List<byte[]>();
+            var offset = 0;
+
+            foreach (var blockSize in blockSizes)
+            {
+                var block = data.Skip(offset).Take(blockSize).ToArray();
+                blocks.Add(block);
+                errorBlocks.Add(ReedSolomon(block, errorCodewordsPerBlock));
+                offset += blockSize;
+            }
+
+            var codewords = new List<byte>();
+            for (var i = 0; i < blockSizes.Max(); i++)
+            {
+                foreach (var block in blocks)
+                {
+                    if (i < block.Length)
+                    {
+                        codewords.Add(block[i]);
+                    }
+                }
+            }
+
+            for (var i = 0; i < errorCodewordsPerBlock; i++)
+            {
+                foreach (var block in errorBlocks)
+                {
+                    codewords.Add(block[i]);
+                }
+            }
+
+            return codewords.ToArray();
+        }
+
+        private static void AddFinder(bool[,] modules, bool[,] reserved, int left, int top)
+        {
+            for (var y = -1; y <= 7; y++)
+            {
+                for (var x = -1; x <= 7; x++)
+                {
+                    var xx = left + x;
+                    var yy = top + y;
+                    if (!InBounds(modules, xx, yy))
+                    {
+                        continue;
+                    }
+
+                    reserved[yy, xx] = true;
+                    modules[yy, xx] = x is >= 0 and <= 6
+                        && y is >= 0 and <= 6
+                        && (x == 0 || x == 6 || y == 0 || y == 6 || (x is >= 2 and <= 4 && y is >= 2 and <= 4));
+                }
+            }
+        }
+
+        private static void AddTiming(bool[,] modules, bool[,] reserved)
+        {
+            var size = modules.GetLength(0);
+            for (var i = 8; i < size - 8; i++)
+            {
+                modules[6, i] = i % 2 == 0;
+                modules[i, 6] = i % 2 == 0;
+                reserved[6, i] = true;
+                reserved[i, 6] = true;
+            }
+        }
+
+        private static void AddAlignment(bool[,] modules, bool[,] reserved, int version)
+        {
+            if (version == 1)
+            {
+                return;
+            }
+
+            var positions = AlignmentPatterns[version - 1];
+            foreach (var y in positions)
+            {
+                foreach (var x in positions)
+                {
+                    if (reserved[y, x])
+                    {
+                        continue;
+                    }
+
+                    for (var dy = -2; dy <= 2; dy++)
+                    {
+                        for (var dx = -2; dx <= 2; dx++)
+                        {
+                            modules[y + dy, x + dx] = Math.Max(Math.Abs(dx), Math.Abs(dy)) != 1;
+                            reserved[y + dy, x + dx] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void AddDarkModule(bool[,] modules, bool[,] reserved, int version)
+        {
+            var y = version * 4 + 9;
+            modules[y, 8] = true;
+            reserved[y, 8] = true;
+        }
+
+        private static void AddVersionBits(bool[,] modules, bool[,] reserved, int version)
+        {
+            if (version < 7)
+            {
+                return;
+            }
+
+            var bits = (version << 12) | CalculateBch(version, 0b1111100100101, 12);
+            var size = modules.GetLength(0);
+            for (var i = 0; i < 18; i++)
+            {
+                var bit = ((bits >> i) & 1) == 1;
+                var a = size - 11 + i % 3;
+                var b = i / 3;
+                modules[b, a] = bit;
+                modules[a, b] = bit;
+                reserved[b, a] = true;
+                reserved[a, b] = true;
+            }
+        }
+
+        private static void AddData(bool[,] modules, bool[,] reserved, byte[] codewords)
+        {
+            var size = modules.GetLength(0);
+            var bitIndex = 0;
+            var upward = true;
+
+            for (var right = size - 1; right >= 1; right -= 2)
+            {
+                if (right == 6)
+                {
+                    right--;
+                }
+
+                for (var vertical = 0; vertical < size; vertical++)
+                {
+                    var y = upward ? size - 1 - vertical : vertical;
+                    for (var dx = 0; dx < 2; dx++)
+                    {
+                        var x = right - dx;
+                        if (reserved[y, x])
+                        {
+                            continue;
+                        }
+
+                        modules[y, x] = bitIndex < codewords.Length * 8
+                            && ((codewords[bitIndex / 8] >> (7 - bitIndex % 8)) & 1) == 1;
+                        bitIndex++;
+                    }
+                }
+
+                upward = !upward;
+            }
+        }
+
+        private static void ApplyMask(bool[,] modules, bool[,] reserved, int mask)
+        {
+            var size = modules.GetLength(0);
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    if (!reserved[y, x] && Mask(mask, x, y))
+                    {
+                        modules[y, x] = !modules[y, x];
+                    }
+                }
+            }
+        }
+
+        private static void AddFormatBits(bool[,] modules, bool[,] reserved, int mask)
+        {
+            const int levelLow = 1;
+            var data = (levelLow << 3) | mask;
+            var bits = (data << 10) | CalculateBch(data, 0b10100110111, 10);
+            bits ^= 0b101010000010010;
+            var size = modules.GetLength(0);
+
+            for (var i = 0; i <= 5; i++) SetFormat(modules, reserved, 8, i, bits, i);
+            SetFormat(modules, reserved, 8, 7, bits, 6);
+            SetFormat(modules, reserved, 8, 8, bits, 7);
+            SetFormat(modules, reserved, 7, 8, bits, 8);
+            for (var i = 9; i < 15; i++) SetFormat(modules, reserved, 14 - i, 8, bits, i);
+            for (var i = 0; i < 8; i++) SetFormat(modules, reserved, size - 1 - i, 8, bits, i);
+            for (var i = 8; i < 15; i++) SetFormat(modules, reserved, 8, size - 15 + i, bits, i);
+        }
+
+        private static void SetFormat(bool[,] modules, bool[,] reserved, int x, int y, int bits, int bit)
+        {
+            modules[y, x] = ((bits >> bit) & 1) == 1;
+            reserved[y, x] = true;
+        }
+
+        private static byte[] ReedSolomon(byte[] data, int degree)
+        {
+            var generator = new byte[] { 1 };
+            for (var i = 0; i < degree; i++)
+            {
+                generator = Multiply(generator, [1, GExp(i)]);
+            }
+
+            var result = new byte[degree];
+            foreach (var value in data)
+            {
+                var factor = (byte)(value ^ result[0]);
+                Array.Copy(result, 1, result, 0, degree - 1);
+                result[degree - 1] = 0;
+                for (var i = 0; i < degree; i++)
+                {
+                    result[i] ^= GMultiply(generator[i + 1], factor);
+                }
+            }
+
+            return result;
+        }
+
+        private static byte[] Multiply(byte[] left, byte[] right)
+        {
+            var result = new byte[left.Length + right.Length - 1];
+            for (var i = 0; i < left.Length; i++)
+            {
+                for (var j = 0; j < right.Length; j++)
+                {
+                    result[i + j] ^= GMultiply(left[i], right[j]);
+                }
+            }
+
+            return result;
+        }
+
+        private static byte GMultiply(byte left, byte right)
+        {
+            if (left == 0 || right == 0)
+            {
+                return 0;
+            }
+
+            return GExp(GLog(left) + GLog(right));
+        }
+
+        private static byte GExp(int exponent)
+        {
+            var value = 1;
+            for (var i = 0; i < exponent % 255; i++)
+            {
+                value <<= 1;
+                if ((value & 0x100) != 0)
+                {
+                    value ^= 0x11D;
+                }
+            }
+
+            return (byte)value;
+        }
+
+        private static int GLog(byte value)
+        {
+            var current = 1;
+            for (var i = 0; i < 255; i++)
+            {
+                if (current == value)
+                {
+                    return i;
+                }
+
+                current <<= 1;
+                if ((current & 0x100) != 0)
+                {
+                    current ^= 0x11D;
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(value));
+        }
+
+        private static int CalculateBch(int value, int polynomial, int degree)
+        {
+            var current = value << degree;
+            while (BitLength(current) >= BitLength(polynomial))
+            {
+                current ^= polynomial << (BitLength(current) - BitLength(polynomial));
+            }
+
+            return current;
+        }
+
+        private static int CalculatePenalty(bool[,] modules)
+        {
+            var size = modules.GetLength(0);
+            var penalty = 0;
+            for (var y = 0; y < size; y++)
+            {
+                penalty += RunPenalty(modules, y, true);
+            }
+            for (var x = 0; x < size; x++)
+            {
+                penalty += RunPenalty(modules, x, false);
+            }
+
+            for (var y = 0; y < size - 1; y++)
+            {
+                for (var x = 0; x < size - 1; x++)
+                {
+                    var color = modules[y, x];
+                    if (modules[y, x + 1] == color && modules[y + 1, x] == color && modules[y + 1, x + 1] == color)
+                    {
+                        penalty += 3;
+                    }
+                }
+            }
+
+            return penalty;
+        }
+
+        private static int RunPenalty(bool[,] modules, int index, bool row)
+        {
+            var size = modules.GetLength(0);
+            var penalty = 0;
+            var runColor = false;
+            var runLength = 0;
+            for (var i = 0; i < size; i++)
+            {
+                var color = row ? modules[index, i] : modules[i, index];
+                if (i == 0 || color == runColor)
+                {
+                    runLength++;
+                }
+                else
+                {
+                    if (runLength >= 5)
+                    {
+                        penalty += runLength - 2;
+                    }
+                    runColor = color;
+                    runLength = 1;
+                }
+            }
+
+            return runLength >= 5 ? penalty + runLength - 2 : penalty;
+        }
+
+        private static bool Mask(int mask, int x, int y) => mask switch
+        {
+            0 => (x + y) % 2 == 0,
+            1 => y % 2 == 0,
+            2 => x % 3 == 0,
+            3 => (x + y) % 3 == 0,
+            4 => (x / 3 + y / 2) % 2 == 0,
+            5 => x * y % 2 + x * y % 3 == 0,
+            6 => (x * y % 2 + x * y % 3) % 2 == 0,
+            _ => ((x + y) % 2 + x * y % 3) % 2 == 0
+        };
+
+        private static void AppendBits(List<bool> bits, int value, int count)
+        {
+            for (var i = count - 1; i >= 0; i--)
+            {
+                bits.Add(((value >> i) & 1) != 0);
+            }
+        }
+
+        private static bool InBounds(bool[,] modules, int x, int y)
+        {
+            var size = modules.GetLength(0);
+            return x >= 0 && y >= 0 && x < size && y < size;
+        }
+
+        private static int BitLength(int value)
+        {
+            var length = 0;
+            while (value != 0)
+            {
+                length++;
+                value >>= 1;
+            }
+
+            return length;
+        }
     }
 
     private sealed class InputModel
     {
         [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [StringLength(7, ErrorMessage = "El {0} debe tener al menos {2} y como maximo {1} caracteres.", MinimumLength = 6)]
         [DataType(DataType.Text)]
-        [Display(Name = "Verification Code")]
+        [Display(Name = "codigo de verificacion")]
         public string Code { get; set; } = "";
     }
 }

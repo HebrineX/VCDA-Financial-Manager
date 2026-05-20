@@ -320,6 +320,11 @@ namespace VCDA.FinancialManager.Web.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("NormalizedNickname")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -329,6 +334,11 @@ namespace VCDA.FinancialManager.Web.Migrations
 
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nickname")
+                        .IsRequired()
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("PhoneNumberConfirmed")
@@ -348,6 +358,10 @@ namespace VCDA.FinancialManager.Web.Migrations
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedNickname")
+                        .IsUnique()
+                        .HasDatabaseName("NicknameIndex");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()

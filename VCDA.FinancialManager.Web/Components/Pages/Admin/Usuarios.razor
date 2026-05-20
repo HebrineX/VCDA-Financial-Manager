@@ -3,10 +3,16 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.JSInterop
 @using System.Security.Claims
+@using VCDA.FinancialManager.Web.Data
+@using VCDA.FinancialManager.Web.Models
 @using VCDA.FinancialManager.Web.Services
 @inject AdminUserService AdminUserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Administración de Usuarios</PageTitle>
 
@@ -29,7 +35,18 @@
         </div>
     }
 
-    @if (users is null)
+    @if (adminRequiresTwoFactor)
+    {
+        <div class="alert alert-warning shadow-sm" role="alert">
+            <h4 class="alert-heading">2FA obligatorio para administradores</h4>
+            <p>
+                Tu cuenta tiene permisos de administrador. Para operar el panel de usuarios,
+                primero configurá una app autenticadora desde la seguridad de tu cuenta.
+            </p>
+            <a class="btn btn-primary" href="Account/Manage/TwoFactorAuthentication">Configurar 2FA</a>
+        </div>
+    }
+    else if (users is null)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
@@ -43,7 +60,8 @@
                     <table class="table table-hover m-0 align-middle">
                         <thead>
                             <tr>
-                                <th class="ps-4">Email</th>
+                                <th class="ps-4">Usuario</th>
+                                <th>Email</th>
                                 <th>Roles</th>
                                 <th>Email confirmado</th>
                                 <th>Estado</th>
@@ -54,7 +72,8 @@
                             @foreach (var user in users)
                             {
                                 <tr>
-                                    <td class="ps-4">@user.Email</td>
+                                    <td class="ps-4">@user.DisplayName</td>
+                                    <td>@user.Email</td>
                                     <td>
                                         @foreach (var role in user.Roles)
                                         {
@@ -72,9 +91,9 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (user.IsLockedOut)
+                                        @if (user.IsDeactivated)
                                         {
-                                            <span class="badge bg-danger">Bloqueado</span>
+                                            <span class="badge bg-danger">Desactivado</span>
                                         }
                                         else
                                         {
@@ -84,13 +103,14 @@
                                     <td class="text-end pe-4">
                                         <div class="action-buttons">
                                             <button class="btn btn-sm @(user.IsAdmin ? "btn-outline-primary" : "btn-primary")"
+                                                    disabled="@user.IsDeactivated"
                                                     title="@(user.IsAdmin ? "Quitar rol Admin" : "Asignar rol Admin")"
                                                     @onclick="() => ToggleAdminRole(user.Id, !user.IsAdmin)">
                                                 @(user.IsAdmin ? "Quitar Admin" : "Hacer Admin")
                                             </button>
-                                            <button class="btn btn-sm @(user.IsLockedOut ? "btn-success" : "btn-outline-danger")"
-                                                    @onclick="() => ToggleLockout(user.Id)">
-                                                @(user.IsLockedOut ? "Activar" : "Desactivar")
+                                            <button class="btn btn-sm @(user.IsDeactivated ? "btn-success" : "btn-outline-danger")"
+                                                    @onclick="() => SetUserDeactivation(user, !user.IsDeactivated)">
+                                                @(user.IsDeactivated ? "Reactivar" : "Desactivar")
                                             </button>
                                         </div>
                                     </td>
@@ -105,31 +125,56 @@
 </div>
 
 @code {
-    private List<VCDA.FinancialManager.Web.Models.UserAdminInfo>? users;
+    private List<AdminUserViewModel>? users;
     private string? currentUserId;
     private string? statusMessage;
     private string? errorMessage;
+    private bool adminRequiresTwoFactor;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        users = await AdminUserService.GetUsersAsync();
-    }
+        var currentUser = await UserManager.GetUserAsync(authState.User);
+        adminRequiresTwoFactor = currentUser is not null
+            && await UserManager.IsInRoleAsync(currentUser, AppRoles.Admin)
+            && !await UserManager.GetTwoFactorEnabledAsync(currentUser);
 
-    private async Task ToggleLockout(string userId)
-    {
-        errorMessage = null;
-        statusMessage = null;
-        var ok = await AdminUserService.ToggleLockoutAsync(userId);
-        if (!ok)
+        if (adminRequiresTwoFactor)
         {
-            errorMessage = "No se pudo cambiar el estado del usuario.";
             return;
         }
 
         users = await AdminUserService.GetUsersAsync();
-        statusMessage = "Estado de acceso actualizado.";
+    }
+
+    private async Task SetUserDeactivation(AdminUserViewModel user, bool deactivate)
+    {
+        errorMessage = null;
+        statusMessage = null;
+
+        if (deactivate)
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>(
+                "confirm",
+                $"¿Confirmas la desactivación de {user.DisplayName}? El usuario no podrá acceder, pero sus transacciones y datos se conservan.");
+            if (!confirmed)
+            {
+                return;
+            }
+        }
+
+        var (success, error) = await AdminUserService.SetUserDeactivationAsync(user.Id, deactivate);
+        if (!success)
+        {
+            errorMessage = error ?? "No se pudo cambiar el estado del usuario.";
+            return;
+        }
+
+        users = await AdminUserService.GetUsersAsync();
+        statusMessage = deactivate
+            ? "Usuario desactivado. Sus transacciones y datos se conservaron."
+            : "Usuario reactivado.";
     }
 
     private async Task ToggleAdminRole(string userId, bool makeAdmin)

@@ -3,10 +3,12 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using VCDA.FinancialManager.Web.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
+@inject ApplicationDbContext DbContext
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
@@ -133,9 +135,15 @@
 
     private async Task<ApplicationUser?> FindUserAsync(string identifier)
     {
-        var normalizedIdentifier = identifier.Trim();
-        var userByEmail = await UserManager.FindByEmailAsync(normalizedIdentifier);
-        return userByEmail ?? await UserManager.FindByNameAsync(normalizedIdentifier);
+        var trimmedIdentifier = identifier.Trim();
+        var userByEmail = await UserManager.FindByEmailAsync(trimmedIdentifier);
+        if (userByEmail is not null)
+        {
+            return userByEmail;
+        }
+
+        var normalizedNickname = UserManager.NormalizeName(trimmedIdentifier) ?? trimmedIdentifier.ToUpperInvariant();
+        return await DbContext.Users.FirstOrDefaultAsync(user => user.NormalizedNickname == normalizedNickname);
     }
 
     private sealed class InputModel
