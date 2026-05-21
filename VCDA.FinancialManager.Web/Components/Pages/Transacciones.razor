@@ -39,7 +39,7 @@
                     else
                     {
                         <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0 align-middle">
+                            <table class="table table-hover table-striped mb-0 align-middle transactions-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="py-3 ps-4">@T["Home.Date"]</th>
@@ -55,20 +55,20 @@
                                     {
                                         <tr>
                                             <td class="py-3 ps-4 text-muted">@tx.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                            <td class="py-3 fw-semibold">@tx.Cuenta?.Nombre</td>
+                                            <td class="py-3 fw-semibold transaction-account-cell">@tx.Cuenta?.Nombre</td>
                                             <td class="py-3"><span class="badge badge-category">@tx.Categoria?.Nombre</span></td>
-                                            <td class="py-3">@tx.Descripcion</td>
+                                            <td class="py-3 transaction-description-cell">@tx.Descripcion</td>
                                             <td class="py-3 text-center">
                                                 @if (tx.Tipo == TipoTransaccion.Ingreso)
                                                 {
-                                                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i> @T["Transactions.Income"]</span>
+                                                    <span class="badge transaction-type-badge transaction-type-income px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i> @T["Transactions.Income"]</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="bi bi-arrow-down-left me-1"></i> @T["Transactions.Expense"]</span>
+                                                    <span class="badge transaction-type-badge transaction-type-expense px-2 py-1"><i class="bi bi-arrow-down-left me-1"></i> @T["Transactions.Expense"]</span>
                                                 }
                                             </td>
-                                            <td class="py-3 text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "text-success" : "text-danger")">
+                                            <td class="py-3 text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "transaction-amount-income" : "transaction-amount-expense")">
                                                 @(tx.Tipo == TipoTransaccion.Ingreso ? "+" : "-") @tx.Monto.ToString("C2")
                                             </td>
                                         </tr>

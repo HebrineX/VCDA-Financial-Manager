@@ -44,6 +44,7 @@
                                         <th class="py-3 ps-4">@T["Accounts.Name"]</th>
                                         <th class="py-3">@T["Accounts.Currency"]</th>
                                         <th class="py-3 text-end pe-4">@T["Accounts.Balance"]</th>
+                                        <th class="py-3 text-end pe-4">@T["Accounts.Actions"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -56,6 +57,24 @@
                                             <td class="py-3"><span class="badge bg-secondary">@cuenta.Moneda</span></td>
                                             <td class="py-3 text-end pe-4 fw-bold @(cuenta.Saldo >= 0 ? "text-success" : "text-danger")">
                                                 @cuenta.Saldo.ToString("C2")
+                                            </td>
+                                            <td class="py-3 text-end pe-4">
+                                                <div class="d-inline-flex gap-2 justify-content-end flex-nowrap">
+                                                    <button type="button"
+                                                            class="btn btn-outline-primary btn-sm account-action-btn"
+                                                            title="@T["Accounts.Edit"]"
+                                                            aria-label="@T["Accounts.Edit"]"
+                                                            @onclick="() => StartEdit(cuenta)">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn btn-outline-danger btn-sm account-action-btn"
+                                                            title="@T["Accounts.Delete"]"
+                                                            aria-label="@T["Accounts.Delete"]"
+                                                            @onclick="() => ConfirmDelete(cuenta)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     }
@@ -83,7 +102,58 @@
                     @if (successMessage)
                     {
                         <div class="alert alert-success" role="alert">
-                            <i class="bi bi-check-circle-fill me-2"></i> @T["Accounts.Created"]
+                            <i class="bi bi-check-circle-fill me-2"></i> @successText
+                        </div>
+                    }
+
+                    @if (editingCuenta is not null)
+                    {
+                        <div class="border rounded-3 p-3 mb-4 bg-body-tertiary">
+                            <h6 class="fw-bold mb-3">@T["Accounts.EditTitle"]</h6>
+                            <EditForm Model="editCuenta" OnValidSubmit="HandleEditCuenta" FormName="EditCuentaForm">
+                                <DataAnnotationsValidator />
+
+                                <div class="mb-3">
+                                    <label for="edit-nombre" class="form-label fw-bold">@T["Accounts.NameLabel"]</label>
+                                    <InputText id="edit-nombre" class="form-control" @bind-Value="editCuenta.Nombre" required />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-moneda" class="form-label fw-bold">@T["Accounts.Currency"]</label>
+                                    <InputSelect id="edit-moneda" class="form-select" @bind-Value="editCuenta.Moneda">
+                                        <option value="ARS">ARS (Peso Argentino)</option>
+                                        <option value="USD">USD (Dólar Estadounidense)</option>
+                                        <option value="EUR">EUR (Euro)</option>
+                                    </InputSelect>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">
+                                        <i class="bi bi-check-lg me-1"></i>@T["Accounts.Save"]
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary flex-fill" @onclick="CancelEdit">
+                                        @T["Accounts.Cancel"]
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    }
+
+                    @if (deletingCuenta is not null)
+                    {
+                        <div class="border rounded-3 p-3 mb-4 bg-body-tertiary">
+                            <h6 class="fw-bold mb-2">@T["Accounts.DeleteConfirm"]</h6>
+                            <p class="small text-muted mb-3">
+                                <strong>@deletingCuenta.Nombre</strong>. @T["Accounts.DeleteHelp"]
+                            </p>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-danger flex-fill" @onclick="HandleDeleteCuenta">
+                                    <i class="bi bi-trash me-1"></i>@T["Accounts.Delete"]
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary flex-fill" @onclick="CancelDelete">
+                                    @T["Accounts.Cancel"]
+                                </button>
+                            </div>
                         </div>
                     }
 
@@ -127,8 +197,12 @@
     private string? userId;
     private string? errorMessage;
     private bool successMessage = false;
+    private string successText = string.Empty;
 
     private CuentaFormModel nuevaCuenta = new();
+    private Cuenta? editingCuenta;
+    private Cuenta? deletingCuenta;
+    private CuentaFormModel editCuenta = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -154,6 +228,7 @@
     {
         errorMessage = null;
         successMessage = false;
+        successText = string.Empty;
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -171,12 +246,101 @@
         {
             await FinancialService.CreateCuentaAsync(nuevaCuenta.Nombre, nuevaCuenta.Saldo, nuevaCuenta.Moneda, userId);
             successMessage = true;
+            successText = T["Accounts.Created"];
             nuevaCuenta = new();
             await CargarCuentas();
         }
         catch (Exception ex)
         {
             errorMessage = string.Format(T["Accounts.CreateError"], ex.Message);
+        }
+    }
+
+    private void StartEdit(Cuenta cuenta)
+    {
+        errorMessage = null;
+        successMessage = false;
+        successText = string.Empty;
+        deletingCuenta = null;
+        editingCuenta = cuenta;
+        editCuenta = new CuentaFormModel
+        {
+            Nombre = cuenta.Nombre,
+            Moneda = cuenta.Moneda,
+            Saldo = cuenta.Saldo
+        };
+    }
+
+    private void ConfirmDelete(Cuenta cuenta)
+    {
+        errorMessage = null;
+        successMessage = false;
+        successText = string.Empty;
+        editingCuenta = null;
+        deletingCuenta = cuenta;
+    }
+
+    private void CancelEdit()
+    {
+        editingCuenta = null;
+        editCuenta = new();
+    }
+
+    private void CancelDelete()
+    {
+        deletingCuenta = null;
+    }
+
+    private async Task HandleEditCuenta()
+    {
+        errorMessage = null;
+        successMessage = false;
+        successText = string.Empty;
+
+        if (string.IsNullOrEmpty(userId) || editingCuenta is null)
+        {
+            errorMessage = T["Accounts.UserMissing"];
+            return;
+        }
+
+        try
+        {
+            await FinancialService.UpdateCuentaAsync(editingCuenta.Id, editCuenta.Nombre, editCuenta.Moneda, userId);
+            editingCuenta = null;
+            editCuenta = new();
+            successMessage = true;
+            successText = T["Accounts.Updated"];
+            await CargarCuentas();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = string.Format(T["Accounts.UpdateError"], ex.Message);
+        }
+    }
+
+    private async Task HandleDeleteCuenta()
+    {
+        errorMessage = null;
+        successMessage = false;
+        successText = string.Empty;
+
+        if (string.IsNullOrEmpty(userId) || deletingCuenta is null)
+        {
+            errorMessage = T["Accounts.UserMissing"];
+            return;
+        }
+
+        try
+        {
+            await FinancialService.DeleteCuentaAsync(deletingCuenta.Id, userId);
+            deletingCuenta = null;
+            successMessage = true;
+            successText = T["Accounts.Deleted"];
+            await CargarCuentas();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = string.Format(T["Accounts.DeleteError"], ex.Message);
         }
     }
 

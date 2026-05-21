@@ -431,6 +431,22 @@ h1:focus-visible {
     box-shadow: none !important;
 }
 
+.account-action-btn {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex: 0 0 2rem;
+}
+
+.account-action-btn .bi {
+    font-size: 0.95rem;
+    line-height: 1;
+    color: inherit;
+}
+
 .form-control,
 .form-select {
     background-color: var(--input-bg) !important;
@@ -544,6 +560,44 @@ h1:focus-visible {
     color: var(--accent-color) !important;
     border: 1px solid rgba(59, 130, 246, 0.25) !important;
     font-weight: 500;
+}
+
+.transactions-table tbody td {
+    color: var(--text-primary) !important;
+}
+
+.transactions-table tbody td.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.transaction-account-cell,
+.transaction-description-cell {
+    color: var(--text-primary) !important;
+}
+
+.transaction-type-badge {
+    border: 1px solid transparent;
+    font-weight: 600;
+}
+
+.transaction-type-income {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+    color: var(--success-color) !important;
+    border-color: rgba(34, 197, 94, 0.28) !important;
+}
+
+.transaction-type-expense {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    color: var(--danger-color) !important;
+    border-color: rgba(239, 68, 68, 0.28) !important;
+}
+
+.transaction-amount-income {
+    color: var(--success-color) !important;
+}
+
+.transaction-amount-expense {
+    color: var(--danger-color) !important;
 }
 
 .bg-success-subtle {

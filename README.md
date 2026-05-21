@@ -6,6 +6,11 @@ La version vigente es `2.2.1`. El objetivo operativo de la linea `2.2.x` es entr
 
 La Fase 8 en curso se concentra en cuatro frentes: auditoria de dependencias e imagenes, hardening del origen productivo, observabilidad/log sanitizado y reproducibilidad/versionado de release.
 
+En el estado actual de `2.2.1` tambien quedaron cerrados dos ajustes de UX operativa:
+
+- `/cuentas` ya expone acciones de editar y eliminar sin superposicion de botones.
+- `/transacciones` usa estilos de tabla y contraste consistentes entre modo claro y oscuro.
+
 ## Stack
 
 | Capa | Tecnologia |

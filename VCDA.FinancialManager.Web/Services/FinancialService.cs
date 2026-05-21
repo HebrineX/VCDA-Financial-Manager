@@ -38,6 +38,38 @@ public class FinancialService(ApplicationDbContext context)
         return cuenta;
     }
 
+    public async Task<Cuenta> UpdateCuentaAsync(Guid cuentaId, string nombre, string moneda, string userId)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            throw new ArgumentException("El nombre de la cuenta es requerido.");
+        }
+
+        var cuenta = await context.Cuentas.FirstOrDefaultAsync(c => c.Id == cuentaId && c.UserId == userId)
+            ?? throw new KeyNotFoundException("La cuenta especificada no existe o no pertenece al usuario.");
+
+        cuenta.Nombre = nombre.Trim();
+        cuenta.Moneda = moneda;
+
+        await context.SaveChangesAsync();
+        return cuenta;
+    }
+
+    public async Task DeleteCuentaAsync(Guid cuentaId, string userId)
+    {
+        var cuenta = await context.Cuentas.FirstOrDefaultAsync(c => c.Id == cuentaId && c.UserId == userId)
+            ?? throw new KeyNotFoundException("La cuenta especificada no existe o no pertenece al usuario.");
+
+        var hasTransactions = await context.Transacciones.AnyAsync(t => t.CuentaId == cuentaId && t.UserId == userId);
+        if (hasTransactions)
+        {
+            throw new InvalidOperationException("No podés eliminar una cuenta que ya tiene movimientos asociados.");
+        }
+
+        context.Cuentas.Remove(cuenta);
+        await context.SaveChangesAsync();
+    }
+
     public async Task<List<Categoria>> GetCategoriasAsync(string userId)
     {
         // Devuelve tanto categorías globales (UserId vacío) como personalizadas del usuario
