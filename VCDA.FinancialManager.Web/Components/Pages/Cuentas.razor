@@ -66,6 +66,7 @@
                                                             aria-label="@T["Accounts.Edit"]"
                                                             @onclick="() => StartEdit(cuenta)">
                                                         <i class="bi bi-pencil-square"></i>
+                                                        <span class="d-none d-xl-inline ms-1">@T["Accounts.EditShort"]</span>
                                                     </button>
                                                     <button type="button"
                                                             class="btn btn-outline-danger btn-sm account-action-btn"
@@ -73,6 +74,7 @@
                                                             aria-label="@T["Accounts.Delete"]"
                                                             @onclick="() => ConfirmDelete(cuenta)">
                                                         <i class="bi bi-trash"></i>
+                                                        <span class="d-none d-xl-inline ms-1">@T["Accounts.DeleteShort"]</span>
                                                     </button>
                                                 </div>
                                             </td>

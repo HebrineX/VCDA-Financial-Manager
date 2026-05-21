@@ -272,6 +272,9 @@ namespace VCDA.FinancialManager.Web.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsImported")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("Monto")
                         .HasColumnType("TEXT");
 

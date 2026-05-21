@@ -14,6 +14,7 @@ public class Transaccion
     public string Descripcion { get; set; } = string.Empty;
     public DateTime Fecha { get; set; }
     public TipoTransaccion Tipo { get; set; }
+    public bool IsImported { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string UserId { get; set; } = string.Empty;
 }

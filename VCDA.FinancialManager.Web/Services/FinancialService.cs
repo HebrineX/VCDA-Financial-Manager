@@ -145,7 +145,7 @@ public class FinancialService(ApplicationDbContext context)
         using var dbTransaction = await context.Database.BeginTransactionAsync();
         try
         {
-            var transaccion = await CreateTransaccionCoreAsync(cuentaId, categoriaId, monto, descripcion, fecha, tipo, userId);
+            var transaccion = await CreateTransaccionCoreAsync(cuentaId, categoriaId, monto, descripcion, fecha, tipo, userId, isImported: false);
             await dbTransaction.CommitAsync();
             return transaccion;
         }
@@ -156,7 +156,7 @@ public class FinancialService(ApplicationDbContext context)
         }
     }
 
-    private async Task<Transaccion> CreateTransaccionCoreAsync(Guid cuentaId, Guid categoriaId, decimal monto, string descripcion, DateTime fecha, TipoTransaccion tipo, string userId)
+    private async Task<Transaccion> CreateTransaccionCoreAsync(Guid cuentaId, Guid categoriaId, decimal monto, string descripcion, DateTime fecha, TipoTransaccion tipo, string userId, bool isImported)
     {
         if (monto <= 0)
         {
@@ -178,6 +178,7 @@ public class FinancialService(ApplicationDbContext context)
             Descripcion = descripcion,
             Fecha = fecha,
             Tipo = tipo,
+            IsImported = isImported,
             UserId = userId,
             CreatedAt = DateTime.UtcNow
         };
@@ -194,6 +195,57 @@ public class FinancialService(ApplicationDbContext context)
         context.Transacciones.Add(transaccion);
         await context.SaveChangesAsync();
         return transaccion;
+    }
+
+    public async Task<Transaccion> UpdateManualTransaccionAsync(Guid transaccionId, Guid cuentaId, Guid categoriaId, decimal monto, string descripcion, DateTime fecha, TipoTransaccion tipo, string userId)
+    {
+        if (monto <= 0)
+        {
+            throw new ArgumentException("El monto de la transacción debe ser mayor a cero.");
+        }
+
+        using var dbTransaction = await context.Database.BeginTransactionAsync();
+        try
+        {
+            var transaccion = await context.Transacciones.FirstOrDefaultAsync(t => t.Id == transaccionId && t.UserId == userId)
+                ?? throw new KeyNotFoundException("La transacción especificada no existe o no pertenece al usuario.");
+
+            if (transaccion.IsImported)
+            {
+                throw new InvalidOperationException("Las transacciones importadas por CSV no se pueden editar desde esta pantalla.");
+            }
+
+            var nuevaCuenta = await context.Cuentas.FirstOrDefaultAsync(c => c.Id == cuentaId && c.UserId == userId)
+                ?? throw new KeyNotFoundException("La cuenta especificada no existe o no pertenece al usuario.");
+
+            var categoria = await context.Categorias.FirstOrDefaultAsync(c => c.Id == categoriaId && (c.UserId == userId || c.UserId == string.Empty))
+                ?? throw new KeyNotFoundException("La categoría especificada no existe.");
+
+            var cuentaOriginal = await context.Cuentas.FirstOrDefaultAsync(c => c.Id == transaccion.CuentaId && c.UserId == userId)
+                ?? throw new KeyNotFoundException("La cuenta original de la transacción no existe.");
+
+            RevertTransactionBalance(cuentaOriginal, transaccion.Tipo, transaccion.Monto);
+            ApplyTransactionBalance(nuevaCuenta, tipo, monto);
+
+            transaccion.CuentaId = cuentaId;
+            transaccion.CategoriaId = categoriaId;
+            transaccion.Monto = monto;
+            transaccion.Descripcion = descripcion;
+            transaccion.Fecha = fecha;
+            transaccion.Tipo = tipo;
+
+            await context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            transaccion.Cuenta = nuevaCuenta;
+            transaccion.Categoria = categoria;
+            return transaccion;
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<List<Presupuesto>> GetPresupuestosAsync(string userId, int? mes = null, int? anio = null)
@@ -409,7 +461,8 @@ public class FinancialService(ApplicationDbContext context)
                     row.Descripcion,
                     row.Fecha!.Value,
                     row.Tipo!.Value,
-                    userId);
+                    userId,
+                    isImported: true);
             }
 
             await dbTransaction.CommitAsync();
@@ -429,5 +482,29 @@ public class FinancialService(ApplicationDbContext context)
             .Include(t => t.Cuenta)
             .Include(t => t.Categoria)
             .Where(t => t.UserId == userId);
+    }
+
+    private static void ApplyTransactionBalance(Cuenta cuenta, TipoTransaccion tipo, decimal monto)
+    {
+        if (tipo == TipoTransaccion.Ingreso)
+        {
+            cuenta.Saldo += monto;
+        }
+        else if (tipo == TipoTransaccion.Egreso)
+        {
+            cuenta.Saldo -= monto;
+        }
+    }
+
+    private static void RevertTransactionBalance(Cuenta cuenta, TipoTransaccion tipo, decimal monto)
+    {
+        if (tipo == TipoTransaccion.Ingreso)
+        {
+            cuenta.Saldo -= monto;
+        }
+        else if (tipo == TipoTransaccion.Egreso)
+        {
+            cuenta.Saldo += monto;
+        }
     }
 }

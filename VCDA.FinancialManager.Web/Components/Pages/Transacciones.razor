@@ -48,6 +48,7 @@
                                         <th class="py-3">@T["Transactions.Description"]</th>
                                         <th class="py-3 text-center">@T["Transactions.Type"]</th>
                                         <th class="py-3 text-end pe-4">@T["Transactions.Amount"]</th>
+                                        <th class="py-3 text-end pe-4">@T["Transactions.Actions"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -70,6 +71,26 @@
                                             </td>
                                             <td class="py-3 text-end pe-4 fw-bold @(tx.Tipo == TipoTransaccion.Ingreso ? "transaction-amount-income" : "transaction-amount-expense")">
                                                 @(tx.Tipo == TipoTransaccion.Ingreso ? "+" : "-") @tx.Monto.ToString("C2")
+                                            </td>
+                                            <td class="py-3 text-end pe-4">
+                                                <div class="d-inline-flex gap-2 justify-content-end flex-nowrap align-items-center">
+                                                    @if (!tx.IsImported)
+                                                    {
+                                                        <span class="badge bg-primary-subtle transaction-origin-badge">@T["Transactions.Manual"]</span>
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary btn-sm account-action-btn"
+                                                                title="@T["Transactions.Edit"]"
+                                                                aria-label="@T["Transactions.Edit"]"
+                                                                @onclick="() => StartEdit(tx)">
+                                                            <i class="bi bi-pencil-square"></i>
+                                                            <span class="d-none d-xl-inline ms-1">@T["Transactions.Edit"]</span>
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary transaction-origin-badge" title="@T["Transactions.EditOnlyManual"]">@T["Transactions.Imported"]</span>
+                                                    }
+                                                </div>
                                             </td>
                                         </tr>
                                     }
@@ -98,7 +119,87 @@
                     @if (successMessage)
                     {
                         <div class="alert alert-success" role="alert">
-                            <i class="bi bi-check-circle-fill me-2"></i> @T["Transactions.Success"]
+                            <i class="bi bi-check-circle-fill me-2"></i> @successText
+                        </div>
+                    }
+                    @if (editingTx is not null)
+                    {
+                        <div class="border rounded-3 p-3 mb-4 bg-body-tertiary">
+                            <h6 class="fw-bold mb-3">@T["Transactions.EditTitle"]</h6>
+                            <EditForm Model="editTx" OnValidSubmit="HandleEditTransaccion" FormName="EditTxForm">
+                                <DataAnnotationsValidator />
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">@T["Transactions.MovementType"]</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-success flex-fill py-2 @(editTx.Tipo == TipoTransaccion.Ingreso ? "active fw-bold" : "")"
+                                                @onclick="() => SetEditTipoTx(TipoTransaccion.Ingreso)">
+                                            <i class="bi bi-arrow-up-right me-1"></i> @T["Transactions.Income"]
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger flex-fill py-2 @(editTx.Tipo == TipoTransaccion.Egreso ? "active fw-bold" : "")"
+                                                @onclick="() => SetEditTipoTx(TipoTransaccion.Egreso)">
+                                            <i class="bi bi-arrow-down-left me-1"></i> @T["Transactions.Expense"]
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-cuenta" class="form-label fw-bold">@T["Transactions.Account"]</label>
+                                    <InputSelect id="edit-cuenta" class="form-select" @bind-Value="editTx.CuentaId">
+                                        <option value="">@T["Transactions.SelectAccount"]</option>
+                                        @if (cuentas != null)
+                                        {
+                                            @foreach (var c in cuentas)
+                                            {
+                                                <option value="@c.Id">@c.Nombre (@c.Saldo.ToString("C2"))</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-categoria" class="form-label fw-bold">@T["Transactions.Category"]</label>
+                                    <InputSelect id="edit-categoria" class="form-select" @bind-Value="editTx.CategoriaId">
+                                        <option value="">@T["Transactions.SelectCategory"]</option>
+                                        @foreach (var cat in CategoriasParaEditTipo)
+                                        {
+                                            <option value="@cat.Id">@cat.Nombre</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-monto" class="form-label fw-bold">@T["Transactions.Amount"]</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <InputText id="edit-monto"
+                                                   class="form-control"
+                                                   @bind-Value="editTx.MontoTexto"
+                                                   inputmode="decimal"
+                                                   autocomplete="off"
+                                                   placeholder="0,00" />
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-descripcion" class="form-label fw-bold">@T["Transactions.Description"]</label>
+                                    <InputText id="edit-descripcion" class="form-control" @bind-Value="editTx.Descripcion" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="edit-fecha" class="form-label fw-bold">@T["Transactions.Date"]</label>
+                                    <InputDate Type="InputDateType.DateTimeLocal" id="edit-fecha" class="form-control" @bind-Value="editTx.Fecha" />
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">
+                                        <i class="bi bi-check-lg me-1"></i> @T["Transactions.SaveEdit"]
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary flex-fill" @onclick="CancelEditTx">
+                                        @T["Accounts.Cancel"]
+                                    </button>
+                                </div>
+                            </EditForm>
                         </div>
                     }
                     @if (cuentas is { Count: 0 })
@@ -253,6 +354,7 @@
     
     private string? errorMessage;
     private bool successMessage = false;
+    private string successText = string.Empty;
     private string? cuentaValidation;
     private string? categoriaValidation;
     private string? montoValidation;
@@ -261,9 +363,13 @@
     private bool catSuccess = false;
 
     private TransaccionFormModel nuevaTx = new();
+    private EditTransaccionFormModel editTx = new();
+    private Transaccion? editingTx;
     private CategoriaFormModel nuevaCat = new();
     private IEnumerable<Categoria> CategoriasParaTipo =>
         categorias?.Where(c => c.Tipo == nuevaTx.Tipo) ?? Enumerable.Empty<Categoria>();
+    private IEnumerable<Categoria> CategoriasParaEditTipo =>
+        categorias?.Where(c => c.Tipo == editTx.Tipo) ?? Enumerable.Empty<Categoria>();
     private string CuentaSelectCss => cuentaValidation is null ? "form-select" : "form-select is-invalid";
     private string CategoriaSelectCss => categoriaValidation is null ? "form-select" : "form-select is-invalid";
     private string MontoInputCss => montoValidation is null ? "form-control" : "form-control is-invalid";
@@ -301,6 +407,7 @@
     {
         errorMessage = null;
         successMessage = false;
+        successText = string.Empty;
         cuentaValidation = null;
         categoriaValidation = null;
         montoValidation = null;
@@ -355,6 +462,7 @@
             );
 
             successMessage = true;
+            successText = T["Transactions.Success"];
             nuevaTx = new(); // Reset form
             await CargarDatos();
         }
@@ -390,6 +498,88 @@
         }
     }
 
+    private void StartEdit(Transaccion tx)
+    {
+        if (tx.IsImported)
+        {
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = false;
+        successText = string.Empty;
+        editingTx = tx;
+        editTx = new EditTransaccionFormModel
+        {
+            Id = tx.Id,
+            CuentaId = tx.CuentaId,
+            CategoriaId = tx.CategoriaId,
+            MontoTexto = tx.Monto.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Descripcion = tx.Descripcion,
+            Fecha = tx.Fecha,
+            Tipo = tx.Tipo
+        };
+    }
+
+    private void CancelEditTx()
+    {
+        editingTx = null;
+        editTx = new();
+    }
+
+    private void SetEditTipoTx(TipoTransaccion tipo)
+    {
+        editTx.Tipo = tipo;
+        editTx.CategoriaId = Guid.Empty;
+    }
+
+    private async Task HandleEditTransaccion()
+    {
+        errorMessage = null;
+        successMessage = false;
+        successText = string.Empty;
+
+        if (string.IsNullOrEmpty(userId) || editingTx is null)
+        {
+            return;
+        }
+
+        if (editTx.CuentaId == Guid.Empty || editTx.CategoriaId == Guid.Empty)
+        {
+            errorMessage = T["Transactions.EditOnlyManual"];
+            return;
+        }
+
+        if (!TryParseMonto(editTx.MontoTexto, out var monto) || monto <= 0)
+        {
+            errorMessage = T["Transactions.ErrorInvalidAmount"];
+            return;
+        }
+
+        try
+        {
+            await FinancialService.UpdateManualTransaccionAsync(
+                editTx.Id,
+                editTx.CuentaId,
+                editTx.CategoriaId,
+                monto,
+                editTx.Descripcion,
+                editTx.Fecha,
+                editTx.Tipo,
+                userId);
+
+            editingTx = null;
+            editTx = new();
+            successMessage = true;
+            successText = T["Transactions.Updated"];
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = string.Format(T["Transactions.ErrorUpdate"], ex.Message);
+        }
+    }
+
     public class TransaccionFormModel
     {
         public Guid CuentaId { get; set; } = Guid.Empty;
@@ -398,6 +588,11 @@
         public string Descripcion { get; set; } = string.Empty;
         public DateTime Fecha { get; set; } = DateTime.Now;
         public TipoTransaccion Tipo { get; set; } = TipoTransaccion.Egreso;
+    }
+
+    public class EditTransaccionFormModel : TransaccionFormModel
+    {
+        public Guid Id { get; set; }
     }
 
     private static bool TryParseMonto(string? value, out decimal monto)

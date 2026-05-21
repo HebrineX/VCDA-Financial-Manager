@@ -48,10 +48,14 @@ public sealed partial class UiText
         es["Transactions.EmptyTitle"] = "No hay movimientos registrados";
         es["Transactions.EmptyText"] = "Registrá tu primer ingreso o egreso en el panel lateral.";
         es["Transactions.Type"] = "Tipo";
+        es["Transactions.Actions"] = "Acciones";
         es["Transactions.Income"] = "Ingreso";
         es["Transactions.Expense"] = "Egreso";
+        es["Transactions.Manual"] = "Manual";
+        es["Transactions.Imported"] = "CSV";
         es["Transactions.RegisterMovement"] = "Registrar Movimiento";
         es["Transactions.Success"] = "Movimiento registrado.";
+        es["Transactions.Updated"] = "Movimiento actualizado.";
         es["Transactions.MovementType"] = "Tipo de Movimiento";
         es["Transactions.Account"] = "Cuenta de Origen/Destino";
         es["Transactions.SelectAccount"] = "-- Seleccionar Cuenta --";
@@ -64,6 +68,10 @@ public sealed partial class UiText
         es["Transactions.DescriptionPlaceholder"] = "Ej: Supermercado, Alquiler, etc.";
         es["Transactions.Date"] = "Fecha";
         es["Transactions.Save"] = "Guardar Movimiento";
+        es["Transactions.SaveEdit"] = "Guardar cambios";
+        es["Transactions.Edit"] = "Editar";
+        es["Transactions.EditTitle"] = "Editar Movimiento";
+        es["Transactions.EditOnlyManual"] = "Solo los movimientos cargados manualmente pueden editarse.";
         es["Transactions.CreateCategory"] = "Crear categoría";
         es["Transactions.CategoryName"] = "Nombre de categoría";
         es["Transactions.CategoryNamePlaceholder"] = "Ej: Servicios, Salidas";
@@ -82,6 +90,7 @@ public sealed partial class UiText
         es["Transactions.ErrorInvalidAmount"] = "El monto no es válido. Ingresá un número mayor a cero, por ejemplo 1500,50.";
         es["Transactions.ValidationInvalidAmount"] = "Ingresá un monto mayor a cero. Ejemplo: 1500,50.";
         es["Transactions.ErrorCreate"] = "Error al registrar movimiento: {0}";
+        es["Transactions.ErrorUpdate"] = "Error al editar movimiento: {0}";
         es["Transactions.CategoryNameRequired"] = "El nombre es requerido.";
         es["Transactions.CategoryError"] = "Error: {0}";
         es["Accounts.Title"] = "Mis Cuentas";
@@ -103,6 +112,8 @@ public sealed partial class UiText
         es["Accounts.Create"] = "Crear Cuenta";
         es["Accounts.Edit"] = "Editar";
         es["Accounts.Delete"] = "Eliminar";
+        es["Accounts.EditShort"] = "Editar";
+        es["Accounts.DeleteShort"] = "Eliminar";
         es["Accounts.Save"] = "Guardar cambios";
         es["Accounts.Cancel"] = "Cancelar";
         es["Accounts.EditTitle"] = "Editar Cuenta";
@@ -188,10 +199,14 @@ public sealed partial class UiText
         en["Transactions.EmptyTitle"] = "No movements registered";
         en["Transactions.EmptyText"] = "Add your first income or expense from the side panel.";
         en["Transactions.Type"] = "Type";
+        en["Transactions.Actions"] = "Actions";
         en["Transactions.Income"] = "Income";
         en["Transactions.Expense"] = "Expense";
+        en["Transactions.Manual"] = "Manual";
+        en["Transactions.Imported"] = "CSV";
         en["Transactions.RegisterMovement"] = "Register Movement";
         en["Transactions.Success"] = "Movement registered.";
+        en["Transactions.Updated"] = "Movement updated.";
         en["Transactions.MovementType"] = "Movement Type";
         en["Transactions.Account"] = "Source/Destination Account";
         en["Transactions.SelectAccount"] = "-- Select Account --";
@@ -204,6 +219,10 @@ public sealed partial class UiText
         en["Transactions.DescriptionPlaceholder"] = "Ex: Groceries, Rent, etc.";
         en["Transactions.Date"] = "Date";
         en["Transactions.Save"] = "Save Movement";
+        en["Transactions.SaveEdit"] = "Save changes";
+        en["Transactions.Edit"] = "Edit";
+        en["Transactions.EditTitle"] = "Edit Movement";
+        en["Transactions.EditOnlyManual"] = "Only manually created movements can be edited.";
         en["Transactions.CreateCategory"] = "Create Category";
         en["Transactions.CategoryName"] = "Category Name";
         en["Transactions.CategoryNamePlaceholder"] = "Ex: Services, Going out";
@@ -222,6 +241,7 @@ public sealed partial class UiText
         en["Transactions.ErrorInvalidAmount"] = "The amount is invalid. Enter a number greater than zero, for example 1500.50.";
         en["Transactions.ValidationInvalidAmount"] = "Enter an amount greater than zero. Example: 1500.50.";
         en["Transactions.ErrorCreate"] = "Error registering movement: {0}";
+        en["Transactions.ErrorUpdate"] = "Error updating movement: {0}";
         en["Transactions.CategoryNameRequired"] = "The name is required.";
         en["Transactions.CategoryError"] = "Error: {0}";
         en["Accounts.Title"] = "My Accounts";
@@ -243,6 +263,8 @@ public sealed partial class UiText
         en["Accounts.Create"] = "Create Account";
         en["Accounts.Edit"] = "Edit";
         en["Accounts.Delete"] = "Delete";
+        en["Accounts.EditShort"] = "Edit";
+        en["Accounts.DeleteShort"] = "Delete";
         en["Accounts.Save"] = "Save changes";
         en["Accounts.Cancel"] = "Cancel";
         en["Accounts.EditTitle"] = "Edit Account";

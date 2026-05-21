@@ -8,6 +8,13 @@ El formato sigue versiones semanticas: `MAJOR.MINOR.PATCH`.
 
 - Sin cambios pendientes versionados.
 
+## 2.2.3 - 2026-05-21
+
+- Transacciones: agregada marca persistente de origen para distinguir movimientos manuales de importaciones CSV.
+- Transacciones: habilitada la edicion solo para movimientos manuales en `/transacciones`, con bloqueo explicito para registros importados.
+- Transacciones: al editar un movimiento manual ahora se recalcula correctamente el saldo de la cuenta, incluso si cambian tipo, monto o cuenta.
+- Cuentas: las acciones de editar y eliminar ahora muestran texto de apoyo en desktop, manteniendo el layout compacto sin superposicion.
+
 ## 2.2.2 - 2026-05-21
 
 - Cuentas: agregadas acciones de editar y eliminar en `/cuentas`, con botones compactos por icono para evitar superposicion visual.

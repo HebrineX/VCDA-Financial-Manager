@@ -432,13 +432,14 @@ h1:focus-visible {
 }
 
 .account-action-btn {
-    width: 2rem;
+    min-width: 2rem;
     height: 2rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
-    flex: 0 0 2rem;
+    padding: 0 0.55rem;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .account-action-btn .bi {
@@ -578,6 +579,11 @@ h1:focus-visible {
 .transaction-type-badge {
     border: 1px solid transparent;
     font-weight: 600;
+}
+
+.transaction-origin-badge {
+    min-width: 3.35rem;
+    text-align: center;
 }
 
 .transaction-type-income {
