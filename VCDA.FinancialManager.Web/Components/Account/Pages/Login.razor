@@ -115,25 +115,30 @@
         }
 
         var result = await SignInManager.PasswordSignInAsync(user.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+        var maskedUserId = SecurityLogSanitizer.MaskUserId(user.Id);
 
         if (result.Succeeded)
         {
-            Logger.LogInformation("User logged in.");
+            Logger.LogInformation("Password login succeeded for {MaskedUserId}.", maskedUserId);
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
         {
+            Logger.LogInformation("Password login requires 2FA for {MaskedUserId}.", maskedUserId);
             RedirectManager.RedirectTo(
                 "Account/LoginWith2fa",
                 new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
+            Logger.LogWarning("Password login locked out for {MaskedUserId}.", maskedUserId);
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
+            Logger.LogWarning(
+                "Invalid password login attempt for {MaskedIdentifier}.",
+                SecurityLogSanitizer.MaskLoginIdentifier(Input.Identifier));
             errorMessage = $"{T["Identity.ErrorPrefix"]}: {T["Identity.Login.Invalid"]}";
         }
     }

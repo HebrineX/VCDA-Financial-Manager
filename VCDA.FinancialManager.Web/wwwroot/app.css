@@ -421,6 +421,16 @@ a:hover,
     outline: none !important;
 }
 
+/*
+ * Blazor FocusOnNavigate moves focus to the first heading after route changes.
+ * Keep the accessibility behavior without painting a visual ring on static page titles.
+ */
+h1:focus,
+h1:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .form-control,
 .form-select {
     background-color: var(--input-bg) !important;

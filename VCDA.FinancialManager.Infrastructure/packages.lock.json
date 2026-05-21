@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "vcda.financialmanager.application": {
+        "type": "Project",
+        "dependencies": {
+          "VCDA.FinancialManager.Domain": "[1.0.0, )"
+        }
+      },
+      "vcda.financialmanager.domain": {
+        "type": "Project"
+      }
+    }
+  }
+}

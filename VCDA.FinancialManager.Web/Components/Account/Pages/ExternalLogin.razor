@@ -118,9 +118,10 @@
 
         if (result.Succeeded)
         {
+            var claimedEmail = externalLoginInfo.Principal.FindFirstValue(ClaimTypes.Email);
             Logger.LogInformation(
-                "{Name} logged in with {LoginProvider} provider.",
-                externalLoginInfo.Principal.Identity?.Name,
+                "External login succeeded for {MaskedEmail} with {LoginProvider} provider.",
+                SecurityLogSanitizer.MaskEmail(claimedEmail),
                 externalLoginInfo.LoginProvider);
             RedirectManager.RedirectTo(ReturnUrl);
             return;
@@ -158,9 +159,11 @@
             result = await UserManager.AddLoginAsync(user, externalLoginInfo);
             if (result.Succeeded)
             {
-                Logger.LogInformation("User created an account using {Name} provider.", externalLoginInfo.LoginProvider);
-
                 var userId = await UserManager.GetUserIdAsync(user);
+                Logger.LogInformation(
+                    "External login account bootstrap succeeded for {MaskedUserId} using {LoginProvider} provider.",
+                    SecurityLogSanitizer.MaskUserId(userId),
+                    externalLoginInfo.LoginProvider);
                 var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 

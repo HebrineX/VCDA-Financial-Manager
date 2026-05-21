@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Serilog.Events;
+using Serilog.Context;
 using System.Security.Cryptography.X509Certificates;
 using VCDA.FinancialManager.Web.Components;
 using VCDA.FinancialManager.Web.Components.Account;
@@ -20,6 +22,7 @@ using VCDA.FinancialManager.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 var enforceHttps = builder.Configuration.GetValue("App:EnforceHttps", !builder.Environment.IsDevelopment());
 var resetDatabaseOnStartup = builder.Configuration.GetValue("App:ResetDatabaseOnStartup", false);
+var applicationName = "VCDA-Financial-Manager";
 
 builder.Services.AddScoped<FinancialService>();
 builder.Services.AddScoped<AdminUserService>();
@@ -62,17 +65,24 @@ builder.Services.AddRateLimiter(options =>
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .Enrich.WithProperty("Application", applicationName)
     .CreateLogger();
 
-builder.Host.UseSerilog();
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", applicationName);
+});
 
 // Configurar DataProtection con certificado X.509 para cifrar claves en reposo
 var certPath = Environment.GetEnvironmentVariable("DATAPROTECTION_CERT_PATH");
 var certPassword = Environment.GetEnvironmentVariable("DATAPROTECTION_CERT_PASSWORD");
 
 var dpBuilder = builder.Services.AddDataProtection()
-    .SetApplicationName("VCDA-Financial-Manager")
+    .SetApplicationName(applicationName)
     .PersistKeysToFileSystem(new DirectoryInfo("/home/app/.aspnet/DataProtection-Keys"));
 
 if (!string.IsNullOrEmpty(certPath) && File.Exists(certPath) && !string.IsNullOrEmpty(certPassword))
@@ -199,16 +209,65 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 });
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
-    context.Response.Headers.TryAdd("Referrer-Policy", "no-referrer");
-    context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    if (!app.Environment.IsProduction())
+    {
+        context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
+        context.Response.Headers.TryAdd("Referrer-Policy", "no-referrer");
+        context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    }
+
     context.Response.Headers.TryAdd(
         "Content-Security-Policy",
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:;");
     await next();
 });
 app.UseRateLimiter();
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.GetLevel = (httpContext, elapsed, exception) =>
+    {
+        if (exception is not null || httpContext.Response.StatusCode >= StatusCodes.Status500InternalServerError)
+        {
+            return LogEventLevel.Error;
+        }
+
+        if (httpContext.Response.StatusCode is StatusCodes.Status429TooManyRequests or StatusCodes.Status405MethodNotAllowed)
+        {
+            return LogEventLevel.Warning;
+        }
+
+        return LogEventLevel.Information;
+    };
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestHost", SecurityLogSanitizer.MaskHost(httpContext.Request.Host.Host));
+        diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+        diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? "/");
+        diagnosticContext.Set("RequestQueryPresent", httpContext.Request.QueryString.HasValue);
+        diagnosticContext.Set("RemoteIp", SecurityLogSanitizer.MaskHost(httpContext.Connection.RemoteIpAddress?.ToString()));
+        diagnosticContext.Set("UserAgentPresent", !string.IsNullOrWhiteSpace(httpContext.Request.Headers.UserAgent));
+        diagnosticContext.Set("TraceId", httpContext.TraceIdentifier);
+    };
+});
+app.Use(async (context, next) =>
+{
+    using (LogContext.PushProperty("TraceId", context.TraceIdentifier))
+    {
+        await next();
+    }
+
+    if (context.Response.StatusCode is StatusCodes.Status429TooManyRequests or StatusCodes.Status405MethodNotAllowed)
+    {
+        Log.Warning(
+            "Security rejection observed: {StatusCode} {Method} {Path} from {RemoteIp}",
+            context.Response.StatusCode,
+            context.Request.Method,
+            context.Request.Path.Value ?? "/",
+            SecurityLogSanitizer.MaskHost(context.Connection.RemoteIpAddress?.ToString()));
+    }
+});
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -216,8 +275,10 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    if (enforceHttps)
+    {
+        app.UseHsts();
+    }
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 if (enforceHttps)

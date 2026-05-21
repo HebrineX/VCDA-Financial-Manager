@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using VCDA.FinancialManager.Web.Components.Account;
 using VCDA.FinancialManager.Web.Data;
 using VCDA.FinancialManager.Web.Models;
 
@@ -87,7 +88,7 @@ internal sealed class SmtpEmailSender(
         {
             logger.LogInformation(
                 "SMTP email skipped for {MaskedEmail} with purpose {Purpose}: recently sent.",
-                MaskEmail(toEmail),
+                SecurityLogSanitizer.MaskEmail(toEmail),
                 purpose);
             return;
         }
@@ -112,12 +113,24 @@ internal sealed class SmtpEmailSender(
             client.Credentials = new NetworkCredential(options.Username, options.Password);
         }
 
-        await client.SendMailAsync(message);
-        logger.LogInformation(
-            "SMTP email sent to {MaskedEmail} with purpose {Purpose} and subject {Subject}",
-            MaskEmail(toEmail),
-            purpose,
-            subject);
+        try
+        {
+            await client.SendMailAsync(message);
+            logger.LogInformation(
+                "SMTP email sent to {MaskedEmail} with purpose {Purpose} and subject {Subject}",
+                SecurityLogSanitizer.MaskEmail(toEmail),
+                purpose,
+                subject);
+        }
+        catch (SmtpException ex)
+        {
+            logger.LogError(
+                ex,
+                "SMTP email failed for {MaskedEmail} with purpose {Purpose}.",
+                SecurityLogSanitizer.MaskEmail(toEmail),
+                purpose);
+            throw;
+        }
     }
 
     private string BuildActionEmail(
@@ -274,20 +287,5 @@ internal sealed class SmtpEmailSender(
     private static string NormalizeEmailForCache(string email)
     {
         return email.Trim().ToUpperInvariant();
-    }
-
-    private static string MaskEmail(string email)
-    {
-        var trimmedEmail = email.Trim();
-        var atIndex = trimmedEmail.IndexOf('@');
-        if (atIndex <= 0 || atIndex == trimmedEmail.Length - 1)
-        {
-            return "***";
-        }
-
-        var localPart = trimmedEmail[..atIndex];
-        var domain = trimmedEmail[(atIndex + 1)..];
-        var visibleLocal = localPart.Length <= 2 ? localPart[0..1] : localPart[..2];
-        return $"{visibleLocal}***@{domain}";
     }
 }

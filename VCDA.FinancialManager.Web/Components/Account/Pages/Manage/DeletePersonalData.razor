@@ -89,7 +89,9 @@
         await SignInManager.SignOutAsync();
 
         var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
+        Logger.LogInformation(
+            "User self-deletion completed for {MaskedUserId}.",
+            SecurityLogSanitizer.MaskUserId(userId));
 
         RedirectManager.RedirectToCurrentPage();
     }

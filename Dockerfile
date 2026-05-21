@@ -8,10 +8,18 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["global.json", "."]
+COPY ["NuGet.Config", "."]
+COPY ["Directory.Build.props", "."]
+COPY ["Directory.Solution.props", "."]
 COPY ["VCDA.FinancialManager.Web/VCDA.FinancialManager.Web.csproj", "VCDA.FinancialManager.Web/"]
+COPY ["VCDA.FinancialManager.Web/packages.lock.json", "VCDA.FinancialManager.Web/"]
 COPY ["VCDA.FinancialManager.Application/VCDA.FinancialManager.Application.csproj", "VCDA.FinancialManager.Application/"]
+COPY ["VCDA.FinancialManager.Application/packages.lock.json", "VCDA.FinancialManager.Application/"]
 COPY ["VCDA.FinancialManager.Domain/VCDA.FinancialManager.Domain.csproj", "VCDA.FinancialManager.Domain/"]
+COPY ["VCDA.FinancialManager.Domain/packages.lock.json", "VCDA.FinancialManager.Domain/"]
 COPY ["VCDA.FinancialManager.Infrastructure/VCDA.FinancialManager.Infrastructure.csproj", "VCDA.FinancialManager.Infrastructure/"]
+COPY ["VCDA.FinancialManager.Infrastructure/packages.lock.json", "VCDA.FinancialManager.Infrastructure/"]
 RUN dotnet restore "./VCDA.FinancialManager.Web/VCDA.FinancialManager.Web.csproj"
 COPY . .
 WORKDIR "/src/VCDA.FinancialManager.Web"

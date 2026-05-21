@@ -74,17 +74,23 @@
 
         if (result.Succeeded)
         {
-            Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
+            Logger.LogInformation(
+                "2FA login succeeded for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User with ID '{UserId}' account locked out.", userId);
+            Logger.LogWarning(
+                "2FA login locked out for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            Logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
+            Logger.LogWarning(
+                "Invalid 2FA authenticator code for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
             message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.TwoFactor.InvalidCode"]}";
         }
     }

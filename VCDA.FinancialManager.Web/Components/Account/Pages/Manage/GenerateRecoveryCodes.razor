@@ -72,6 +72,8 @@ else
         recoveryCodes = await UserManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
         message = T["Identity.GenerateRecoveryCodes.Success"];
 
-        Logger.LogInformation("User with ID '{UserId}' has generated new 2FA recovery codes.", userId);
+        Logger.LogInformation(
+            "New 2FA recovery codes generated for {MaskedUserId}.",
+            SecurityLogSanitizer.MaskUserId(userId));
     }
 }

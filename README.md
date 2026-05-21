@@ -2,7 +2,9 @@
 
 VCDA-Financial-Manager es una aplicacion web de finanzas personales construida con Blazor Server y ASP.NET Core. Permite administrar cuentas, transacciones, categorias, presupuestos mensuales, reportes, exportacion/importacion CSV y usuarios con roles `Admin` y `User`.
 
-El objetivo de la version `2.0` es entregar una app autocontenida, ejecutable localmente o con Docker, con SQLite persistido, SMTP configurable, HTTPS detras de Nginx y configuracion publica segura mediante `.env`.
+La version vigente es `2.2.1`. El objetivo operativo de la linea `2.2.x` es entregar una app autocontenida, ejecutable localmente o con Docker, con SQLite persistido, SMTP configurable, HTTPS detras de Nginx, configuracion publica segura mediante `.env` y una linea de hardening/release hygiene mantenible.
+
+La Fase 8 en curso se concentra en cuatro frentes: auditoria de dependencias e imagenes, hardening del origen productivo, observabilidad/log sanitizado y reproducibilidad/versionado de release.
 
 ## Stack
 
@@ -230,6 +232,8 @@ La configuracion productiva usa:
 - Nginx con TLS y HTTP/2.
 - Certificado Let's Encrypt emitido por DNS-01 usando Cloudflare.
 - App `web` interna en Docker, sin publicar `8080` a Internet.
+- Politica de exposicion `443-only`: no se publica `80` y no hay redireccion `80->443` en produccion.
+- El borde acepta trafico valido solo para `finanzas.vircomdelan.com.ar`; acceso por IP directa o `Host` invalido se rechaza en Nginx.
 
 ### DNS
 
@@ -320,6 +324,8 @@ Levantar produccion:
 docker compose -p vcda-prod -f docker-compose.prod.yml up --build -d web nginx
 ```
 
+`docker-compose.prod.yml` publica solo `443:443`. El servicio `web` queda interno en la red Docker mediante `expose: 8080` y no debe abrirse al host ni a Internet.
+
 Validar:
 
 ```powershell
@@ -334,6 +340,19 @@ https://finanzas.vircomdelan.com.ar
 ```
 
 El navegador no deberia mostrar advertencia de certificado si DNS, puerto 443 y Let's Encrypt estan correctos.
+
+### Smoke publico F8-B
+
+Checklist minimo a ejecutar contra `https://finanzas.vircomdelan.com.ar` antes de cerrar el slice:
+
+1. `GET /Account/Login` responde `200`.
+2. `GET /Account/ForgotPassword` responde `200`.
+3. `GET /admin/usuarios` con sesion Admin valida responde `200`; sin sesion debe redirigir a login o rechazar segun Identity.
+4. `GET /health` responde desde el origen previsto y no debe quedar abierto por IP publica fuera del borde esperado.
+5. Headers de seguridad presentes en respuestas HTML: `strict-transport-security`, `x-content-type-options`, `x-frame-options`, `referrer-policy`, `permissions-policy`.
+6. Acceso por IP directa o `Host` invalido debe ser rechazado por Nginx.
+
+Este README documenta la politica y el checklist. La evidencia ejecutada de smoke debe registrarse aparte en `.hebrinex/orquestador/sdd/progress/cycles/`.
 
 ### Renovar certificado
 
@@ -400,11 +419,49 @@ docker compose down
 Para validar una imagen versionada:
 
 ```powershell
-docker build -t vcda-financial-manager:2.0.0 .
-docker run --rm vcda-financial-manager:2.0.0
+docker build -t vcda-financial-manager:2.2.1 .
+docker run --rm vcda-financial-manager:2.2.1
 ```
 
-En el flujo Compose, la imagen local esperada es `vcda-financial-manager:2.0.0`.
+En el flujo Compose, la imagen local esperada es `vcda-financial-manager:2.2.1`.
+
+## Versionado y publicacion
+
+### Fuente canonica de version
+
+La fuente canonica de version para runtime y UI es `VCDA.FinancialManager.Web/VCDA.FinancialManager.Web.csproj`, usando:
+
+- `Version`
+- `InformationalVersion`
+
+`AppVersionProvider` resuelve primero `App:Version` y, si no existe, usa `AssemblyInformationalVersion`. Por politica de release, Compose no debe sobreescribir `App__Version` salvo un caso excepcional y explicitamente documentado.
+
+Los artefactos de despliegue deben seguir esa misma version:
+
+- `docker-compose.yml` y `docker-compose.prod.yml` deben apuntar al tag `vcda-financial-manager:<version>`.
+- `CHANGELOG.md` debe abrir una entrada para la version publicada.
+- `README.md` solo debe mencionar la version vigente o ejemplos historicos claramente marcados.
+
+### Politica SemVer
+
+El proyecto usa `MAJOR.MINOR.PATCH`.
+
+- `MAJOR`: cambios incompatibles de contrato, operacion o despliegue.
+- `MINOR`: capacidades nuevas compatibles hacia atras.
+- `PATCH`: correcciones, hardening, release hygiene y cambios operativos sin features nuevas.
+
+Fase 8 se publica como trabajo de `PATCH` sobre la linea `2.2.x`, salvo decision humana distinta.
+
+### Checklist manual de publicacion
+
+1. Definir la version objetivo en `VCDA.FinancialManager.Web.csproj`.
+2. Alinear el tag de imagen en `docker-compose.yml` y `docker-compose.prod.yml`.
+3. Confirmar que no exista `App__Version` en Compose salvo excepcion aprobada.
+4. Actualizar `CHANGELOG.md` con fecha, alcance y evidencia minima.
+5. Revisar `README.md` para remover referencias obsoletas de version y comandos de imagen.
+6. Ejecutar `dotnet build` y `dotnet test`.
+7. Construir la imagen versionada que corresponda al release.
+8. Publicar solo si docs, artefactos y version visible coinciden.
 
 ## CSV de importacion
 

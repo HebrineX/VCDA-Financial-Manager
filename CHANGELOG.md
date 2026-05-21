@@ -8,6 +8,13 @@ El formato sigue versiones semanticas: `MAJOR.MINOR.PATCH`.
 
 - Sin cambios pendientes versionados.
 
+## 2.2.1 - 2026-05-20
+
+- Inicio operativo de Fase 8 sobre la linea `2.2.x`: hardening, observabilidad, reproducibilidad y release hygiene sin agregar features de negocio.
+- Fase 8 worker D: eliminada la inyeccion duplicada de `App__Version` desde Compose para que runtime/UI lean la version canonica del ensamblado.
+- Alineadas `VCDA.FinancialManager.Web.csproj`, `docker-compose.yml` y `docker-compose.prod.yml` a `2.2.1`.
+- `README.md` corregido para remover referencias obsoletas `2.0.x` y documentar politica SemVer + checklist manual de publicacion.
+
 ## 2.2.0 - 2026-05-20
 
 - Fase 7 cerrada: UX/i18n, UI polish, onboarding e importador bancario sin MCP.

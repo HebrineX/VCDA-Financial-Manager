@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using VCDA.FinancialManager.Web.Components.Account;
 using VCDA.FinancialManager.Web.Models;
 
 namespace VCDA.FinancialManager.Web.Data;
@@ -51,10 +52,10 @@ public static class IdentitySeed
         if (adminCandidates.Count > 1)
         {
             logger.LogWarning(
-                "IdentitySeed encontró {Count} usuarios con el email admin {Email}. Se utilizará {UserId}.",
+                "IdentitySeed encontró {Count} usuarios con el email admin {MaskedEmail}. Se utilizará {MaskedUserId}.",
                 adminCandidates.Count,
-                adminSeed.Email,
-                adminCandidates[0].Id);
+                SecurityLogSanitizer.MaskEmail(adminSeed.Email),
+                SecurityLogSanitizer.MaskUserId(adminCandidates[0].Id));
         }
 
         var admin = adminCandidates.FirstOrDefault();

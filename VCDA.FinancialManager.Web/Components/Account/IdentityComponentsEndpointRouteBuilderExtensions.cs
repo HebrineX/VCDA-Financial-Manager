@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+using VCDA.FinancialManager.Web.Components.Account;
 using VCDA.FinancialManager.Web.Components.Account.Pages;
 using VCDA.FinancialManager.Web.Components.Account.Pages.Manage;
 using VCDA.FinancialManager.Web.Data;
@@ -83,11 +84,13 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             var user = await userManager.GetUserAsync(context.User);
             if (user is null)
             {
-                return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
+                return Results.NotFound("Unable to load the requested user.");
             }
 
             var userId = await userManager.GetUserIdAsync(user);
-            downloadLogger.LogInformation("User with ID '{UserId}' asked for their personal data.", userId);
+            downloadLogger.LogInformation(
+                "Personal data export requested for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
 
             // Only include personal data for download
             var personalData = new Dictionary<string, string>();

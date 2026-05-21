@@ -61,17 +61,23 @@
 
         if (result.Succeeded)
         {
-            Logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", userId);
+            Logger.LogInformation(
+                "Recovery-code login succeeded for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.IsLockedOut)
         {
-            Logger.LogWarning("User account locked out.");
+            Logger.LogWarning(
+                "Recovery-code login locked out for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
             RedirectManager.RedirectTo("Account/Lockout");
         }
         else
         {
-            Logger.LogWarning("Invalid recovery code entered for user with ID '{UserId}' ", userId);
+            Logger.LogWarning(
+                "Invalid recovery code for {MaskedUserId}.",
+                SecurityLogSanitizer.MaskUserId(userId));
             message = $"{T["Identity.ErrorPrefix"]}: {T["Identity.RecoveryLogin.Invalid"]}";
         }
     }

@@ -64,7 +64,9 @@
         }
 
         var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' has disabled 2fa.", userId);
+        Logger.LogInformation(
+            "2FA disabled for {MaskedUserId}.",
+            SecurityLogSanitizer.MaskUserId(userId));
         RedirectManager.RedirectToWithStatus(
             "Account/Manage/TwoFactorAuthentication",
             T["Identity.Disable2fa.Success"],
