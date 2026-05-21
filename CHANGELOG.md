@@ -8,6 +8,11 @@ El formato sigue versiones semanticas: `MAJOR.MINOR.PATCH`.
 
 - Sin cambios pendientes versionados.
 
+## 2.2.4 - 2026-05-21
+
+- Transacciones: corregido el panel de edicion para que respete el tema activo y no fuerce un bloque claro en dark mode.
+- UI/Theming: alineados `input-group-text` y titulo del bloque de edicion con las variables de tema para mantener consistencia visual en modo oscuro y claro.
+
 ## 2.2.3 - 2026-05-21
 
 - Transacciones: agregada marca persistente de origen para distinguir movimientos manuales de importaciones CSV.

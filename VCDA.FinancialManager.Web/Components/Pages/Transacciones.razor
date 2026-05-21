@@ -124,8 +124,8 @@
                     }
                     @if (editingTx is not null)
                     {
-                        <div class="border rounded-3 p-3 mb-4 bg-body-tertiary">
-                            <h6 class="fw-bold mb-3">@T["Transactions.EditTitle"]</h6>
+                        <div class="transaction-edit-panel rounded-3 p-3 mb-4">
+                            <h6 class="transaction-edit-title fw-bold mb-3">@T["Transactions.EditTitle"]</h6>
                             <EditForm Model="editTx" OnValidSubmit="HandleEditTransaccion" FormName="EditTxForm">
                                 <DataAnnotationsValidator />
 

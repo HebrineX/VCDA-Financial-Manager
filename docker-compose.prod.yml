@@ -1,6 +1,6 @@
 services:
   web:
-    image: vcda-financial-manager:2.2.3
+    image: vcda-financial-manager:2.2.4
     build:
       context: .
       dockerfile: Dockerfile

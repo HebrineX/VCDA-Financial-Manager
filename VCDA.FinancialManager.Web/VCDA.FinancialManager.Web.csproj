@@ -6,8 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-VCDA.FinancialManager_Web-d0c073ab-0c88-4d7b-9ac9-1f864624b1c9</UserSecretsId>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <Version>2.2.3</Version>
-    <InformationalVersion>2.2.3</InformationalVersion>
+    <Version>2.2.4</Version>
+    <InformationalVersion>2.2.4</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

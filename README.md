@@ -2,15 +2,16 @@
 
 VCDA-Financial-Manager es una aplicacion web de finanzas personales construida con Blazor Server y ASP.NET Core. Permite administrar cuentas, transacciones, categorias, presupuestos mensuales, reportes, exportacion/importacion CSV y usuarios con roles `Admin` y `User`.
 
-La version vigente es `2.2.3`. El objetivo operativo de la linea `2.2.x` es entregar una app autocontenida, ejecutable localmente o con Docker, con SQLite persistido, SMTP configurable, HTTPS detras de Nginx, configuracion publica segura mediante `.env` y una linea de hardening/release hygiene mantenible.
+La version vigente es `2.2.4`. El objetivo operativo de la linea `2.2.x` es entregar una app autocontenida, ejecutable localmente o con Docker, con SQLite persistido, SMTP configurable, HTTPS detras de Nginx, configuracion publica segura mediante `.env` y una linea de hardening/release hygiene mantenible.
 
 La Fase 8 en curso se concentra en cuatro frentes: auditoria de dependencias e imagenes, hardening del origen productivo, observabilidad/log sanitizado y reproducibilidad/versionado de release.
 
-En el estado actual de `2.2.3` tambien quedaron cerrados tres ajustes de UX operativa:
+En el estado actual de `2.2.4` tambien quedaron cerrados cuatro ajustes de UX operativa:
 
 - `/cuentas` ya expone acciones de editar y eliminar sin superposicion de botones.
 - `/transacciones` usa estilos de tabla y contraste consistentes entre modo claro y oscuro.
 - `/transacciones` permite editar solo movimientos manuales; los importados por CSV quedan identificados y bloqueados para edicion.
+- el panel de edicion de `/transacciones` ahora respeta el tema activo y no rompe el dark mode.
 
 ## Stack
 
@@ -425,11 +426,11 @@ docker compose down
 Para validar una imagen versionada:
 
 ```powershell
-docker build -t vcda-financial-manager:2.2.3 .
-docker run --rm vcda-financial-manager:2.2.3
+docker build -t vcda-financial-manager:2.2.4 .
+docker run --rm vcda-financial-manager:2.2.4
 ```
 
-En el flujo Compose, la imagen local esperada es `vcda-financial-manager:2.2.3`.
+En el flujo Compose, la imagen local esperada es `vcda-financial-manager:2.2.4`.
 
 ## Versionado y publicacion
 
