@@ -6,6 +6,10 @@ El formato sigue versiones semanticas: `MAJOR.MINOR.PATCH`.
 
 ## Unreleased
 
+- Sin cambios pendientes versionados.
+
+## 2.2.2 - 2026-05-21
+
 - Cuentas: agregadas acciones de editar y eliminar en `/cuentas`, con botones compactos por icono para evitar superposicion visual.
 - Cuentas: la eliminacion ahora se bloquea si la cuenta ya tiene movimientos asociados.
 - UI/Theming: corregido contraste inconsistente en `/transacciones` entre modo claro/oscuro, aislando la tabla con estilos propios para evitar mezclas de negro/blanco heredadas.
